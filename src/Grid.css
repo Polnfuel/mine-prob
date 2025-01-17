@@ -1,0 +1,37 @@
+.grid {
+    display: grid;
+    margin: 50px 300px;
+}
+.cell {
+    width: 30px;
+    height: 30px;
+    background-color: lightgray;
+    border: 1px solid #777777;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cell span {
+    font-size: 16px;
+    font-weight: 900;
+    cursor: pointer;
+}
+.cell span.cell1 {
+    color: #2e4eff;
+}
+.cell span.cell2 {
+    color: #0a7500;
+}
+.cell span.cell3 {
+    color: #e01515;
+}
+.cell span.cell4 {
+    color: #0b0078;
+}
+.cell span.cell5 {
+    color: #800d00;
+}
+.cell:has(span.cellC, span.cellF) {
+    background-color: #aaaaaa;
+}

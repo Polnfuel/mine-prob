@@ -1,0 +1,6 @@
+.forma {
+  width: fit-content;
+}
+.forma div.col-auto {
+  width: 100px;
+}
