@@ -65,8 +65,8 @@ function App() {
   let [curwidth, setcurwidth] = useState(10);
   let [curheight, setcurheight] = useState(12);
   let [curmines, setcurmines] = useState(11);
-  let [Field, setField] = useState(Array.from({length: Height}, () => Array.from({length: Width}, () => null)));
-  let [UserField, setUserField] = useState(Array.from({length: Height}, () => Array.from({length: Width}, () => null)));
+  let [Field, setField] = useState(Array.from({length: Width}, () => Array.from({length: Height}, () => null)));
+  let [UserField, setUserField] = useState(Array.from({length: Width}, () => Array.from({length: Height}, () => null)));
   let [DField, setDField] = useState(Array.from({length: Width * Height}, () => null));
   let [GameStatus, setGameStatus] = useState(null);
 
@@ -118,8 +118,8 @@ function App() {
   }
   return (
     <div className="app">
-      <Grid width={Width} height={Height} field={UserField}/>
-      <Grid width={Width} height={Height} field={Field}/>
+      <Grid width={Width} height={Height} field={UserField} id={1}/>
+      <Grid width={Width} height={Height} field={Field} id={2}/>
       <div className='forma container mt-5'>
         <form className='row g-3'>
           <div className='col-auto'>

@@ -1,6 +1,6 @@
 import './Grid.css';
 
-function Grid({width, height, field}) {
+function Grid({width, height, field, id}) {
     const rows = Array.from({length: width}, (_, row) => 
         Array.from({length: height}, (_, col) => {
             let content = '';
@@ -13,7 +13,7 @@ function Grid({width, height, field}) {
                 </span>
             </div>);
         }));
-    return <div className='grid' style={{gridTemplateColumns: `repeat(${height}, 30px)`, gridTemplateRows: `repeat(${width}, 30px)`}}>{rows}</div>
+    return <div className='grid' id={`field${id}`} style={{gridTemplateColumns: `repeat(${height}, 30px)`, gridTemplateRows: `repeat(${width}, 30px)`}}>{rows}</div>
 }
 
 export default Grid;

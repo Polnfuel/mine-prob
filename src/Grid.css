@@ -1,6 +1,12 @@
 .grid {
     display: grid;
-    margin: 50px 300px;
+    margin-left: 20%;
+}
+#field1 {
+    margin-top: 50px;
+}
+#field2 {
+    margin-top: 20px;
 }
 .cell {
     width: 30px;
@@ -32,6 +38,6 @@
 .cell span.cell5 {
     color: #800d00;
 }
-.cell:has(span.cellC, span.cellF) {
+.cell:has(span.cellC, span.cellF, span.cellnull) {
     background-color: #aaaaaa;
 }
