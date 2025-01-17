@@ -1,6 +1,7 @@
 .grid {
     display: grid;
     margin-left: 20%;
+    user-select: none;
 }
 #field1 {
     margin-top: 50px;
