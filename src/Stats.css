@@ -1,0 +1,10 @@
+.stats{
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: left;
+}
+.stats span{
+    font-size: 17px;
+    font-weight: 600;
+}

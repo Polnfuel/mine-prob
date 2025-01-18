@@ -2,9 +2,10 @@
     display: grid;
     margin-left: 20%;
     user-select: none;
+    border: 2px solid black;
 }
 #field1 {
-    margin-top: 50px;
+    margin-top: 20px;
 }
 #field2 {
     margin-top: 20px;
@@ -20,12 +21,12 @@
     justify-content: center;
 }
 .cell span {
-    font-size: 16px;
+    font-size: 24px;
     font-weight: 900;
     cursor: pointer;
 }
 .cell span.cell1 {
-    color: #2e4eff;
+    color: #2943d6;
 }
 .cell span.cell2 {
     color: #0a7500;
@@ -39,6 +40,19 @@
 .cell span.cell5 {
     color: #800d00;
 }
-.cell:has(span.cellC, span.cellF, span.cellnull) {
-    background-color: #aaaaaa;
+.cell span.cell6{
+    color: #337675;
+}
+.cell span.cell7{
+    color: #000000;
+}
+.cell span.cell8 {
+    color: #777777;
+}
+.cell:has(span.cellC, span.cellF) {
+    background-color: #c5c4c4;
+    border-left: 4px solid #efefef;
+    border-top: 4px solid #efefef;
+    border-bottom: 4px solid #8d8d8d;
+    border-right: 4px solid #8d8d8d;
 }

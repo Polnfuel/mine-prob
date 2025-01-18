@@ -18,7 +18,14 @@ function Grid({width, height, field, id, OnCell}) {
         Array.from({length: height}, (_, col) => {
             let content = '';
             if (field[row][col] !== "0" && field[row][col] !== "C")
-                content = field[row][col];
+            {
+                if (field[row][col] === "F")
+                    content = "⚐";
+                else if (field[row][col] === "M")
+                    content = "✪";
+                else
+                    content = field[row][col];
+            }
             return (
             <div key={`${row}-${col}`} className='cell' onMouseDown={(e) => {OnCell(row, col, e.button)}}>
                 <span className={`cell${field[row][col]}`}>

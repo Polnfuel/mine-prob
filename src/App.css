@@ -1,6 +1,8 @@
 .forma {
   width: fit-content;
+  margin-left: 20%;
+  margin-bottom: 10px;
 }
 .forma div.col-auto {
-  width: 100px;
+  width: 80px;
 }

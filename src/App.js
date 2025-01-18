@@ -1,5 +1,6 @@
 import './App.css';
 import Grid from './Grid';
+import Stats from './Stats';
 import React, {useEffect, useState} from 'react';
 
 function GetNeighboors(i, j, field) {
@@ -113,9 +114,10 @@ function GetNeigh(cell, field){
 }
 
 function App() {
-  let winit = 10;
-  let hinit = 12;
-  let minit = 15;
+  let winit = 5;
+  let hinit = 5;
+  let minit = 3;
+  let statinit = Array.from({length: 3}, () => 0);
   let [Width, setWidth] = useState(winit);
   let [Height, setHeight] = useState(hinit);
   let [MinesCount, setMinesCount] = useState(minit);
@@ -126,6 +128,10 @@ function App() {
   let [UserField, setUserField] = useState(Array.from({length: Width}, () => Array.from({length: Height}, () => null)));
   let [DField, setDField] = useState(Array.from({length: Width * Height}, () => null));
   let [GameStatus, setGameStatus] = useState(null);
+  let [Won, setWon] = useState(Boolean(false));
+  let [Statistics, setStat] = useState(statinit);
+  let allopened = false;
+  let statistics = Statistics;
 
   function createfield(){
     let width = curwidth;
@@ -163,6 +169,8 @@ function App() {
     setMinesCount(curmines);
     setGameStatus("Inited");
     create1dfield(field);
+    setStat(statinit);
+    setWon(false);
   }
   function create1dfield(field) {
     let dField = new Array(field.length * field[0].length);
@@ -179,6 +187,7 @@ function App() {
   function setUFvalue(row, col, value){
     let fld = UserField.map(row => [...row]);
     fld[row][col] = value;
+    isWon(fld);
     setUserField(fld);
   }
   function cleanzerocell(row, col, field, lasttoopen){
@@ -220,15 +229,31 @@ function App() {
     lst.forEach(cell => {
       fld[Math.floor(cell / UserField[0].length)][cell % UserField[0].length] = Field[Math.floor(cell / UserField[0].length)][cell % UserField[0].length];
     });
+    isWon(fld);
     setUserField(fld);
+  }
+  function isWon(ufield){
+    let mas = 0;
+    for (let i = 0; i < ufield.length; i++){
+      for (let j = 0; j < ufield[0].length; j++){
+        if (ufield[i][j] === "C" || ufield[i][j] === "F"){
+          mas++;
+        }
+      }
+    }
+    if (mas === MinesCount)
+    {
+      allopened = true;
+      setWon(true);
+    }
   }
   function cellclicked(row, col, button){
     console.log(`${row} - ${col} - ${button}`);
-    //debugger;
     if (button === 0){
       if (Field[row][col] === "M"){
         if (GameStatus === "Inited"){
           //move
+          GameStatus = "Going";
         }
         else {
           //game over
@@ -237,20 +262,32 @@ function App() {
       else if (Field[row][col] === "0"){
         clean(row, col);
       }
-      else{
+      else if (UserField[row][col] !== "F"){
         setUFvalue(row, col, Field[row][col]);
       }
+      //all empty opened - win
+      if (allopened){
+        debugger;
+        console.log("Win!!!");
+        setStat(statistics);
+      }
+      statistics[0]++;
     }
     else if (button === 2){
-      
+      if (UserField[row][col] === "C"){
+        setUFvalue(row, col, "F");
+      }
+      else if (UserField[row][col] === "F"){
+        setUFvalue(row, col, "C");
+      }
+      statistics[1]++;
     }
+    console.log(statistics);
   }
 
   return (
     <div className="app">
-      <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked}/>
-      <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked}/>
-      <div className='forma container mt-5'>
+      <div className='forma mt-4'>
         <form className='row g-3'>
           <div className='col-auto'>
             <input value={curwidth} onChange={(e) => setcurwidth(Number(e.target.value))} type='number' className='form-control' placeholder='Высота' />
@@ -266,6 +303,9 @@ function App() {
           </div>
         </form>
       </div>
+      <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked}/>
+      <Stats show={Won} stats={Statistics}/>
+      <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked}/>
     </div>
   );
 }
