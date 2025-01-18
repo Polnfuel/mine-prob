@@ -15,7 +15,6 @@
     height: 30px;
     background-color: lightgray;
     border: 1px solid #777777;
-    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -23,7 +22,6 @@
 .cell span {
     font-size: 24px;
     font-weight: 900;
-    cursor: pointer;
 }
 .cell span.cell1 {
     color: #2943d6;
@@ -55,4 +53,7 @@
     border-top: 4px solid #efefef;
     border-bottom: 4px solid #8d8d8d;
     border-right: 4px solid #8d8d8d;
+}
+.cell:has(span.redcell){
+    background-color: #ff3030;
 }

@@ -127,11 +127,12 @@ function App() {
   let [Field, setField] = useState(Array.from({length: Width}, () => Array.from({length: Height}, () => null)));
   let [UserField, setUserField] = useState(Array.from({length: Width}, () => Array.from({length: Height}, () => null)));
   let [DField, setDField] = useState(Array.from({length: Width * Height}, () => null));
-  let [GameStatus, setGameStatus] = useState(null);
-  let [Won, setWon] = useState(Boolean(false));
+  let [GameStatus, setGameStatus] = useState("Inited");
+  let [ShowStat, setShowStat] = useState(Boolean(false));
   let [Statistics, setStat] = useState(statinit);
   let allopened = false;
   let statistics = Statistics;
+  let [redcell, setredcell] = useState(null);
 
   function createfield(){
     let width = curwidth;
@@ -170,7 +171,7 @@ function App() {
     setGameStatus("Inited");
     create1dfield(field);
     setStat(statinit);
-    setWon(false);
+    setShowStat(false);
   }
   function create1dfield(field) {
     let dField = new Array(field.length * field[0].length);
@@ -244,45 +245,62 @@ function App() {
     if (mas === MinesCount)
     {
       allopened = true;
-      setWon(true);
+      setShowStat(true);
     }
   }
   function cellclicked(row, col, button){
     console.log(`${row} - ${col} - ${button}`);
-    if (button === 0){
-      if (Field[row][col] === "M"){
-        if (GameStatus === "Inited"){
-          //move
-          GameStatus = "Going";
+    if (GameStatus !== "Won" && GameStatus !== "Fail"){
+      if (button === 0){
+        if (Field[row][col] === "M" && UserField[row][col] !== "F"){
+          if (GameStatus === "Inited"){
+            //move
+          }
+          else {
+            //game over and show mines
+            console.log("Fail");
+            let fld = UserField.map(row => [...row]);
+            for (let ind = 0; ind < DField.length; ind++){
+              if (DField[ind] === "M" && fld[Math.floor(ind / UserField[0].length)][ind % UserField[0].length] !== "F"){
+                fld[Math.floor(ind / UserField[0].length)][ind % UserField[0].length] = "M";
+              }
+            }
+            setredcell([row, col]);
+            setUserField(fld);
+            setGameStatus("Fail");
+            setShowStat(true);
+            setStat(statistics);
+          }
         }
-        else {
-          //game over
+        else if (Field[row][col] === "0"){
+          clean(row, col);
         }
+        else if (UserField[row][col] !== "F"){
+          setUFvalue(row, col, Field[row][col]);
+        }
+        //all empty opened - win
+        if (allopened){
+          debugger;
+          console.log("Win!!!");
+          setGameStatus("Won");
+          setShowStat(true);
+          setStat(statistics);
+        }
+        statistics[0]++;
+        if (GameStatus === "Inited")
+          setGameStatus("Going");
       }
-      else if (Field[row][col] === "0"){
-        clean(row, col);
+      else if (button === 2){
+        if (UserField[row][col] === "C"){
+          setUFvalue(row, col, "F");
+        }
+        else if (UserField[row][col] === "F"){
+          setUFvalue(row, col, "C");
+        }
+        statistics[1]++;
+        setGameStatus("Going");
       }
-      else if (UserField[row][col] !== "F"){
-        setUFvalue(row, col, Field[row][col]);
-      }
-      //all empty opened - win
-      if (allopened){
-        debugger;
-        console.log("Win!!!");
-        setStat(statistics);
-      }
-      statistics[0]++;
     }
-    else if (button === 2){
-      if (UserField[row][col] === "C"){
-        setUFvalue(row, col, "F");
-      }
-      else if (UserField[row][col] === "F"){
-        setUFvalue(row, col, "C");
-      }
-      statistics[1]++;
-    }
-    console.log(statistics);
   }
 
   return (
@@ -303,9 +321,9 @@ function App() {
           </div>
         </form>
       </div>
-      <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked}/>
-      <Stats show={Won} stats={Statistics}/>
-      <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked}/>
+      <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
+      <Stats show={ShowStat} stats={Statistics}/>
+      <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/>
     </div>
   );
 }
