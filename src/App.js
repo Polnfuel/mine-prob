@@ -1,7 +1,7 @@
 import './App.css';
 import Grid from './Grid';
 import Stats from './Stats';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 
 function GetNeighboors(i, j, field) {
     let count = 0;
@@ -171,7 +171,7 @@ function GetFlagCount(i, j, field, retmas=false){
 }
 function App() {
   let winit = 5;
-  let hinit = 5;
+  let hinit = 7;
   let minit = 3;
   let statinit = Array.from({length: 3}, () => 0);
   let [Width, setWidth] = useState(winit);
@@ -189,6 +189,9 @@ function App() {
   let allopened = false;
   let statistics = Statistics;
   let [redcell, setredcell] = useState(null);
+  let [isStart, setisStart] = useState(false);
+  let [elapsedTime, setelapsedTime] = useState(0);
+  const timerRef = useRef(null);
 
   function createfield(){
     let width = curwidth;
@@ -229,6 +232,8 @@ function App() {
     setStat(statinit);
     setShowStat(false);
     setredcell(null);
+    setisStart(false);
+    setelapsedTime(0);
   }
   function create1dfield(field) {
     let dField = new Array(field.length * field[0].length);
@@ -241,10 +246,6 @@ function App() {
   }
   useEffect(() => {
     createfield();
-    // setInterval(() => {
-    //   statistics[2] += 0.02;
-    //   setStat(statistics);
-    // }, 20);
   }, []);
   function setUFvalue(row, col, value){
     let fld = UserField.map(row => [...row]);
@@ -315,6 +316,14 @@ function App() {
   function cellclicked(row, col, button){
     console.log(`${row} - ${col} - ${button}`);
     if (GameStatus !== "Won" && GameStatus !== "Fail"){
+      //start timer
+      if (!isStart){
+        setisStart(true);
+        const startTime = performance.now();
+        timerRef.current = setInterval(() => {
+          setelapsedTime(performance.now() - startTime);
+        }, 10);
+      }
       if (button === 0){
         if (Field[row][col] === "M" && UserField[row][col] !== "F"){
           if (GameStatus === "Inited"){
@@ -329,11 +338,7 @@ function App() {
                 fld[Math.floor(ind / UserField[0].length)][ind % UserField[0].length] = "M";
               }
             }
-            setredcell([row, col]);
-            setUserField(fld);
-            setGameStatus("Fail");
-            setShowStat(true);
-            setStat(statistics);
+            gameend("Fail", fld, [row, col]);
           }
         }
         else if (Field[row][col] === "0"){
@@ -364,11 +369,7 @@ function App() {
                       fld[Math.floor(ind / UserField[0].length)][ind % UserField[0].length] = "M";
                     }
                   }
-                  setredcell([i, j]);
-                  setUserField(fld);
-                  setGameStatus("Fail");
-                  setShowStat(true);
-                  setStat(statistics);
+                  gameend("Fail", fld, [i, j]);
                   break;
                 }
                 else{
@@ -393,9 +394,7 @@ function App() {
         //all empty opened - win
         if (allopened){
           console.log("Win!!!");
-          setGameStatus("Won");
-          setShowStat(true);
-          setStat(statistics);
+          gameend("Won");
         }
         statistics[0]++;
         if (GameStatus === "Inited")
@@ -413,7 +412,26 @@ function App() {
       }
     }
   }
-
+  function stopTimer(){
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }
+  function gameend(status, fld=null , cell=null){
+    stopTimer();
+    setisStart(false);
+    if (cell !== null)
+      setredcell(cell);
+    if (fld !== null)
+      setUserField(fld);
+    setGameStatus(status);
+    setShowStat(true);
+    setStat(statistics);
+  }
+  useEffect(() => {
+    return () => stopTimer();
+  }, []);
   return (
     <div className="app">
       <div className='forma mt-4'>
@@ -432,8 +450,9 @@ function App() {
           </div>
         </form>
       </div>
+      <div style={{marginLeft: "25%"}}>{Math.floor(elapsedTime / 1000)}</div>
       <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
-      <Stats show={ShowStat} stats={Statistics}/>
+      <Stats show={ShowStat} stats={Statistics} time={(elapsedTime / 1000).toFixed(3)}/>
       <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/>
     </div>
   );
