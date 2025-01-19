@@ -344,24 +344,42 @@ function App() {
             //clean
             console.log("Clean flag!");
             debugger;
-            let mas = GetNeigh(toone(row, col, Width), Field);
-            mas = mas.filter(nei => DField[nei] !== "M");
+            let mas = GetNeigh(toone(row, col, Height), Field);
             let lst = [];
-            mas.forEach(cell => {
+            let fld;
+            for (let c = 0; c < mas.length; c++){
+              const cell = mas[c];
               let i = Math.floor(cell / UserField[0].length);
               let j = Math.floor(cell % UserField[0].length);
               if (UserField[i][j] === "C"){
                 if (Field[i][j] === "0"){
                   lst = clean(i, j, true);
                 }
+                else if (Field[i][j] === "M"){
+                  //game over and show mines
+                  console.log("Fail");
+                  fld = UserField.map(row => [...row]);
+                  for (let ind = 0; ind < DField.length; ind++){
+                    if (DField[ind] === "M"){
+                      fld[Math.floor(ind / UserField[0].length)][ind % UserField[0].length] = "M";
+                    }
+                  }
+                  setredcell([i, j]);
+                  setUserField(fld);
+                  setGameStatus("Fail");
+                  setShowStat(true);
+                  setStat(statistics);
+                  break;
+                }
                 else{
                   if (!lst.includes(cell))
                     lst.push(cell);
                 }
               }
-            });
+            }
+            if (fld === undefined)
+              fld = UserField.map(row => [...row]);
             console.log(lst);
-            let fld = UserField.map(row => [...row]);
             lst.forEach(cell => {
              fld[Math.floor(cell / UserField[0].length)][cell % UserField[0].length] = Field[Math.floor(cell / UserField[0].length)][cell % UserField[0].length];
             });
