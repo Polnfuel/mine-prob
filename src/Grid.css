@@ -13,8 +13,8 @@
 .cell {
     width: 30px;
     height: 30px;
-    background-color: lightgray;
-    border: 1px solid #777777;
+    background-color: #c6c6c6;
+    border: 1px solid #808080;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,19 +24,19 @@
     font-weight: 900;
 }
 .cell span.cell1 {
-    color: #2943d6;
+    color: #0000f7;
 }
 .cell span.cell2 {
-    color: #0a7500;
+    color: #007700;
 }
 .cell span.cell3 {
-    color: #e01515;
+    color: #ec0000;
 }
 .cell span.cell4 {
-    color: #0b0078;
+    color: #000080;
 }
 .cell span.cell5 {
-    color: #800d00;
+    color: #800000;
 }
 .cell span.cell6{
     color: #337675;
@@ -48,11 +48,11 @@
     color: #777777;
 }
 .cell:has(span.cellC, span.cellF) {
-    background-color: #c5c4c4;
-    border-left: 4px solid #efefef;
-    border-top: 4px solid #efefef;
-    border-bottom: 4px solid #8d8d8d;
-    border-right: 4px solid #8d8d8d;
+    background-color: #c6c6c6;
+    border-left: 4px solid #ffffff;
+    border-top: 4px solid #ffffff;
+    border-bottom: 4px solid #808080;
+    border-right: 4px solid #808080;
 }
 .cell:has(span.redcell){
     background-color: #ff3030;

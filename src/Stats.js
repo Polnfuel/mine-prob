@@ -3,9 +3,10 @@ import React from 'react';
 
 
 function Stats({show, stats}){
-    //debugger;
     if (show){
-        const time = `Time: ${stats[2]} s`;
+        let time = `Time: ${stats[2]}`;
+        // debugger;
+        // time = time.slice(0, time.length-13) + " s";
         const leftclicks = `Left clicks: ${stats[0]}`;
         const rightclicks = `Right clicks: ${stats[1]}`;
         return (

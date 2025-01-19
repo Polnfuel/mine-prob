@@ -112,7 +112,63 @@ function GetNeigh(cell, field){
     }
     return mas;
 }
-
+function GetFlagCount(i, j, field, retmas=false){
+  let count = 0;
+  let mas;
+  if (i === 0)
+      {
+          if (j === 0)
+          {
+              mas = [ field[i + 1][j + 1], field[i][j + 1], field[i + 1][j] ];
+          }
+          else if (j === field[0].length - 1)
+          {
+              mas = [ field[i + 1][j - 1], field[i][j - 1], field[i + 1][j] ];
+          }
+          else
+          {
+              mas = [field[i + 1][j - 1], field[i][j - 1], field[i + 1][j], field[i + 1][j + 1], field[i][j + 1]];
+          }
+      }
+      else if (i === field.length - 1)
+      {
+          if (j === 0)
+          {
+              mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j] ];
+          }
+          else if (j === field[0].length - 1)
+          {
+              mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j] ];
+          }
+          else
+          {
+              mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1] ];
+          }
+      }
+      else
+      {
+          if (j === 0)
+          {
+              mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j], field[i + 1][j + 1], field[i + 1][j]];
+          }
+          else if (j === field[0].length - 1)
+          {
+              mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i + 1][j - 1], field[i + 1][j]];
+          }
+          else
+          {
+              mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1], field[i + 1][j + 1], field[i + 1][j - 1], field[i + 1][j]];
+          }
+      }
+  mas.forEach(cell => {
+      if (cell === "F"){
+          count++;
+      }
+  });
+  if (!retmas)
+    return count;
+  return mas;
+}
 function App() {
   let winit = 5;
   let hinit = 5;
@@ -172,6 +228,7 @@ function App() {
     create1dfield(field);
     setStat(statinit);
     setShowStat(false);
+    setredcell(null);
   }
   function create1dfield(field) {
     let dField = new Array(field.length * field[0].length);
@@ -184,6 +241,10 @@ function App() {
   }
   useEffect(() => {
     createfield();
+    // setInterval(() => {
+    //   statistics[2] += 0.02;
+    //   setStat(statistics);
+    // }, 20);
   }, []);
   function setUFvalue(row, col, value){
     let fld = UserField.map(row => [...row]);
@@ -223,7 +284,7 @@ function App() {
     }
     return toopen;
   }
-  function clean(row, col){
+  function clean(row, col, isret=false){
     let lst0 = cleanzerocell(row, col, Field, []);
     let lst = cleanzerocell(row, col, Field, lst0);
     let fld = UserField.map(row => [...row]);
@@ -232,6 +293,9 @@ function App() {
     });
     isWon(fld);
     setUserField(fld);
+    if (isret){
+      return lst;
+    }
   }
   function isWon(ufield){
     let mas = 0;
@@ -276,11 +340,40 @@ function App() {
           clean(row, col);
         }
         else if (UserField[row][col] !== "F"){
-          setUFvalue(row, col, Field[row][col]);
+          if (UserField[row][col] === String(GetFlagCount(row, col, UserField))){
+            //clean
+            console.log("Clean flag!");
+            debugger;
+            let mas = GetNeigh(toone(row, col, Width), Field);
+            mas = mas.filter(nei => DField[nei] !== "M");
+            let lst = [];
+            mas.forEach(cell => {
+              let i = Math.floor(cell / UserField[0].length);
+              let j = Math.floor(cell % UserField[0].length);
+              if (UserField[i][j] === "C"){
+                if (Field[i][j] === "0"){
+                  lst = clean(i, j, true);
+                }
+                else{
+                  if (!lst.includes(cell))
+                    lst.push(cell);
+                }
+              }
+            });
+            console.log(lst);
+            let fld = UserField.map(row => [...row]);
+            lst.forEach(cell => {
+             fld[Math.floor(cell / UserField[0].length)][cell % UserField[0].length] = Field[Math.floor(cell / UserField[0].length)][cell % UserField[0].length];
+            });
+            isWon(fld);
+            setUserField(fld);
+          }
+          else{
+            setUFvalue(row, col, Field[row][col]);
+          }
         }
         //all empty opened - win
         if (allopened){
-          debugger;
           console.log("Win!!!");
           setGameStatus("Won");
           setShowStat(true);
