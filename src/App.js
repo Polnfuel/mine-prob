@@ -179,6 +179,7 @@ function App() {
   let [Width, setWidth] = useState(winit);
   let [Height, setHeight] = useState(hinit);
   let [MinesCount, setMinesCount] = useState(minit);
+  let [MinesRemaining, setMinesRemaining] = useState(minit);
   let [curwidth, setcurwidth] = useState(winit);
   let [curheight, setcurheight] = useState(hinit);
   let [curmines, setcurmines] = useState(minit);
@@ -236,6 +237,7 @@ function App() {
     setWidth(curwidth);
     setHeight(curheight);
     setMinesCount(curmines);
+    setMinesRemaining(curmines);
     setGameStatus("Inited");
     create1dfield(field);
     setStat(statinit);
@@ -422,9 +424,11 @@ function App() {
       else if (button === 2){
         if (UserField[row][col] === "C"){
           setUFvalue(row, col, "F");
+          setMinesRemaining(MinesRemaining - 1);
         }
         else if (UserField[row][col] === "F"){
           setUFvalue(row, col, "C");
+          setMinesRemaining(MinesRemaining + 1);
         }
         statistics[1]++;
         setGameStatus("Going");
@@ -469,7 +473,7 @@ function App() {
           </div>
         </form>
       </div>
-      <div style={{marginLeft: "25%"}}>{Math.floor(elapsedTime / 1000)}</div>
+      <div style={{marginLeft: "25%"}}><span>{MinesRemaining}</span><span style={{marginLeft: "40px"}}>{Math.floor(elapsedTime / 1000)}</span></div>
       <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
       <Stats show={ShowStat} stats={Statistics} time={(elapsedTime / 1000).toFixed(3)}/>
       <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/>
