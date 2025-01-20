@@ -1,7 +1,6 @@
 import './Stats.css';
 import React from 'react';
 
-
 function Stats({show, stats, time}){
     if (show){
         const timestat = `Time: ${time} s`;

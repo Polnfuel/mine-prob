@@ -58,8 +58,8 @@ function GetNeighboors(i, j, field) {
     });
     return count;
 }
-function toone(row, col, width){
-  return (row * width + col);
+function toone(row, col, height){
+  return (row * height + col);
 }
 function GetNeigh(cell, field){
   let mas = [];
@@ -169,6 +169,8 @@ function GetFlagCount(i, j, field, retmas=false){
     return count;
   return mas;
 }
+let Row = 0, Col = 0;
+let IsStart = false;
 function App() {
   let winit = 5;
   let hinit = 7;
@@ -188,12 +190,19 @@ function App() {
   let [Statistics, setStat] = useState(statinit);
   let allopened = false;
   let statistics = Statistics;
+  let gamestatus = "Inited";
   let [redcell, setredcell] = useState(null);
-  let [isStart, setisStart] = useState(false);
+  let [isStart, setisStart] = useState(Boolean(false));
   let [elapsedTime, setelapsedTime] = useState(0);
   const timerRef = useRef(null);
 
-  function createfield(){
+  if (GameStatus === "Second"){
+    cellclicked(Row, Col, 0);
+    setGameStatus("Going");
+    gamestatus = "Going";
+  }
+
+  function createfield(cell=null){
     let width = curwidth;
     let height = curheight;
     let minescount = curmines;
@@ -205,7 +214,7 @@ function App() {
             do {
                 newmine = Math.floor(Math.random() * (width * height));
                 mines[i] = newmine;
-            } while (mines.indexOf(newmine) !==  mines.lastIndexOf(newmine));
+            } while (mines.indexOf(newmine) !==  mines.lastIndexOf(newmine) || newmine === cell);
         }
         mines.forEach(mine => {
             field[Math.floor(mine / height)][mine % height] = "M";
@@ -232,7 +241,12 @@ function App() {
     setStat(statinit);
     setShowStat(false);
     setredcell(null);
-    setisStart(false);
+    if (IsStart === false)
+      setisStart(false);
+    if (GameStatus === "Going"){
+      setisStart(false);
+      stopTimer();
+    }
     setelapsedTime(0);
   }
   function create1dfield(field) {
@@ -318,7 +332,8 @@ function App() {
     if (GameStatus !== "Won" && GameStatus !== "Fail"){
       //start timer
       if (!isStart){
-        setisStart(true);
+        setisStart(Boolean(true));
+        IsStart = true;
         const startTime = performance.now();
         timerRef.current = setInterval(() => {
           setelapsedTime(performance.now() - startTime);
@@ -327,7 +342,12 @@ function App() {
       if (button === 0){
         if (Field[row][col] === "M" && UserField[row][col] !== "F"){
           if (GameStatus === "Inited"){
-            //move
+            //move mine
+            createfield(toone(row, col, Height));
+            setGameStatus("Second");
+            gamestatus = "Second";
+            Row = row;
+            Col = col;
           }
           else {
             //game over and show mines
@@ -348,7 +368,6 @@ function App() {
           if (UserField[row][col] === String(GetFlagCount(row, col, UserField))){
             //clean
             console.log("Clean flag!");
-            debugger;
             let mas = GetNeigh(toone(row, col, Height), Field);
             let lst = [];
             let fld;
@@ -397,7 +416,7 @@ function App() {
           gameend("Won");
         }
         statistics[0]++;
-        if (GameStatus === "Inited")
+        if (GameStatus === "Inited" && gamestatus === "Inited")
           setGameStatus("Going");
       }
       else if (button === 2){
