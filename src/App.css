@@ -6,3 +6,45 @@
 .forma div.col-auto {
   width: 80px;
 }
+.field-cont {
+  background-color: #c0c0c0;
+  width: fit-content;
+  border-left: 6px solid #ffffff;
+  border-top: 6px solid #ffffff;
+  border-bottom: 6px solid #808080;
+  border-right: 6px solid #808080;
+  padding: 10px;
+  margin-left: 20%;
+  box-shadow: -4px -4px 8px 0px rgba(34, 60, 80, 0.15);
+}
+.field-header {
+  border-bottom: 6px solid #ffffff;
+  border-right: 6px solid #ffffff;
+  border-left: 6px solid #808080;
+  border-top: 6px solid #808080;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.field-mines {
+  height: 50px;
+}
+.restart-button {
+  width: 45px;
+  height: 45px;
+  background-color: #c6c6c6;
+  border-left: 4px solid #ffffff;
+  border-top: 4px solid #ffffff;
+  border-bottom: 4px solid #808080;
+  border-right: 4px solid #808080;
+}
+.field-timer {
+  height: 50px;
+}
+.field-grid {
+  border-bottom: 6px solid #ffffff;
+  border-right: 6px solid #ffffff;
+  border-left: 6px solid #808080;
+  border-top: 6px solid #808080;
+  margin-top: 10px;
+}

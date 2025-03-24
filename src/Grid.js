@@ -1,5 +1,5 @@
 import './Grid.css';
-import React, {useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef} from 'react';
 
 function Grid({width, height, field, id, OnCell, mine}) {
     const gridRef = useRef(null);
@@ -17,7 +17,29 @@ function Grid({width, height, field, id, OnCell, mine}) {
     const rows = Array.from({length: width}, (_, row) => 
         Array.from({length: height}, (_, col) => {
             let content = '';
-            let classname = `cell${field[row][col]}`;
+            let classname;
+            if (typeof field[row][col] === 'number'){
+                classname = 'cellprob';
+                if (field[row][col] === 0){
+                    classname += " zeroprob";
+                }
+                else if (field[row][col] < 15){
+                    classname += " lowprob";
+                }
+                else if (field[row][col] < 50){
+                    classname += " medprob";
+                }
+                else if (field[row][col] < 99){
+                    classname += " highprob";
+                }
+                else if (field[row][col] === 100) {
+                    classname += " mineprob";
+                }
+            }
+            else {
+                classname = `cell${field[row][col]}`;
+            }
+            
             if (mine !== null){
                 if (mine[0] === row && mine[1] === col && id === 1){
                     classname += " redcell";

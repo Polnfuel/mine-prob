@@ -1,14 +1,12 @@
 .grid {
     display: grid;
-    margin-left: 20%;
     user-select: none;
-    border: 2px solid black;
-}
-#field1 {
-    margin-top: 20px;
 }
 #field2 {
     margin-top: 20px;
+}
+#field3 {
+    margin: 20px;
 }
 .cell {
     width: 30px;
@@ -47,12 +45,32 @@
 .cell span.cell8 {
     color: #777777;
 }
-.cell:has(span.cellC, span.cellF) {
+.cell:has(span.cellC, span.cellF, span.cellprob) {
     background-color: #c6c6c6;
     border-left: 4px solid #ffffff;
     border-top: 4px solid #ffffff;
     border-bottom: 4px solid #808080;
     border-right: 4px solid #808080;
+}
+.cell span.cellprob {
+    color: #000000;
+    font-weight: 800;
+    font-size: 14px;
+}
+.cell:has(span.zeroprob) {
+    background-color: #56ff8e;
+}
+.cell span.lowprob {
+    color: #00882d;
+}
+.cell span.medprob {
+    color: #7b7d00;
+}
+.cell span.highprob {
+    color: #8d0101;
+}
+.cell:has(span.mineprob) {
+    background-color: #ff5656;
 }
 .cell:has(span.redcell){
     background-color: #ff3030;

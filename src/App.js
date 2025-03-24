@@ -1,6 +1,7 @@
 import './App.css';
 import Grid from './Grid';
 import Stats from './Stats';
+import FilePaste from './FilePaste';
 import React, {useEffect, useRef, useState} from 'react';
 
 function GetNeighboors(i, j, field) {
@@ -473,10 +474,19 @@ function App() {
           </div>
         </form>
       </div>
-      <div style={{marginLeft: "25%"}}><span>{MinesRemaining}</span><span style={{marginLeft: "40px"}}>{Math.floor(elapsedTime / 1000)}</span></div>
-      <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
+      <div className="field-cont">
+        <div className="field-header">
+          <span className="field-mines">{MinesRemaining}</span>
+          <button type='button' onClick={createfield} className="restart-button"> </button>
+          <span className="field-timer">{Math.floor(elapsedTime / 1000)}</span>
+        </div>
+        <div className="field-grid">
+          <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
+        </div>
+      </div>
       <Stats show={ShowStat} stats={Statistics} time={(elapsedTime / 1000).toFixed(3)}/>
-      <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/>
+      {/* <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/> */}
+      <FilePaste />
     </div>
   );
 }
