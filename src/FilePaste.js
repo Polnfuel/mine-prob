@@ -471,9 +471,11 @@ export default function FilePaste(){
     const [imageUrl, setImageUrl] = useState("");
 
     useEffect(() => {
-        setField(Array.from({ length: height }, () =>
-          Array.from({ length: width }, () => null)
-        ));
+        if (width > 0 && height > 0){
+            setField(Array.from({ length: height }, () =>
+                Array.from({ length: width }, () => null)
+              ));
+        }
     }, [width, height]);
 
     // const handlePaste = async (event) => {
@@ -677,7 +679,7 @@ export default function FilePaste(){
             {/* <div onPaste={handlePaste} style={{border: "5px dashed gray", padding: 20, width: "500px"}}></div> */}
             <div className="pasteItems">
                 <button type="button" onClick={urlPaste}>Paste</button>
-                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Вставьте URL изображения" style={{ width: "300px" }}/>
+                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>
                 <button type="button" onClick={() => {setImageUrl("");}}>Clear</button>
             </div>
             <div className="fieldItems">

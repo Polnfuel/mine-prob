@@ -7,3 +7,15 @@
     margin-left: 40px;
     margin-top: 20px;
 }
+
+.pasteItems button, .fieldItems button {
+    background-color: rgb(118, 255, 145);
+    color: black;
+    margin-right: 5px;
+    border-radius: 5px;
+}
+
+.pasteItems input, .fieldItems input {
+    width: 300px;
+    margin-right: 5px;
+}

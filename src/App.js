@@ -173,9 +173,9 @@ function GetFlagCount(i, j, field, retmas=false){
 let Row = 0, Col = 0;
 let IsStart = false;
 function App() {
-  let winit = 5;
-  let hinit = 7;
-  let minit = 3;
+  let winit = 9;
+  let hinit = 9;
+  let minit = 10;
   let statinit = Array.from({length: 3}, () => 0);
   let [Width, setWidth] = useState(winit);
   let [Height, setHeight] = useState(hinit);
@@ -461,13 +461,13 @@ function App() {
       <div className='forma mt-4'>
         <form className='row g-3'>
           <div className='col-auto'>
-            <input value={curwidth} onChange={(e) => setcurwidth(Number(e.target.value))} type='text' className='form-control' placeholder='Высота' />
+            <input value={curheight} onChange={(e) => setcurheight(Number(e.target.value))} type='text' className='form-control'/>
           </div>
           <div className='col-auto'>
-            <input value={curheight} onChange={(e) => setcurheight(Number(e.target.value))} type='text' className='form-control' placeholder='Ширина' />
+            <input value={curwidth} onChange={(e) => setcurwidth(Number(e.target.value))} type='text' className='form-control' />
           </div>
           <div className='col-auto'>
-            <input value={curmines} onChange={(e) => setcurmines(Number(e.target.value))} type='text' className='form-control' placeholder='Кол-во мин' />
+            <input value={curmines} onChange={(e) => setcurmines(Number(e.target.value))} type='text' className='form-control'/>
           </div>
           <div className='col-auto'>
             <button type='button' onClick={createfield}>Создать</button>
@@ -475,9 +475,9 @@ function App() {
         </form>
       </div>
       <div className="field-cont">
-        <div className="field-header">
+        <div className="field-header" onClick={createfield}>
           <span className="field-mines">{MinesRemaining}</span>
-          <button type='button' onClick={createfield} className="restart-button"> </button>
+          <button type='button' className="restart-button"> </button>
           <span className="field-timer">{Math.floor(elapsedTime / 1000)}</span>
         </div>
         <div className="field-grid">
@@ -486,7 +486,6 @@ function App() {
       </div>
       <Stats show={ShowStat} stats={Statistics} time={(elapsedTime / 1000).toFixed(3)}/>
       {/* <Grid width={Width} height={Height} field={Field} id={2} OnCell={cellclicked} mine={redcell}/> */}
-      <FilePaste />
     </div>
   );
 }
