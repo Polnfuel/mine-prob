@@ -461,13 +461,13 @@ function App() {
       <div className='forma mt-4'>
         <form className='row g-3'>
           <div className='col-auto'>
-            <input value={curwidth} onChange={(e) => setcurwidth(Number(e.target.value))} type='number' className='form-control' placeholder='Высота' />
+            <input value={curwidth} onChange={(e) => setcurwidth(Number(e.target.value))} type='text' className='form-control' placeholder='Высота' />
           </div>
           <div className='col-auto'>
-            <input value={curheight} onChange={(e) => setcurheight(Number(e.target.value))} type='number' className='form-control' placeholder='Ширина' />
+            <input value={curheight} onChange={(e) => setcurheight(Number(e.target.value))} type='text' className='form-control' placeholder='Ширина' />
           </div>
           <div className='col-auto'>
-            <input value={curmines} onChange={(e) => setcurmines(Number(e.target.value))} type='number' className='form-control' placeholder='Кол-во мин' />
+            <input value={curmines} onChange={(e) => setcurmines(Number(e.target.value))} type='text' className='form-control' placeholder='Кол-во мин' />
           </div>
           <div className='col-auto'>
             <button type='button' onClick={createfield}>Создать</button>
@@ -481,7 +481,7 @@ function App() {
           <span className="field-timer">{Math.floor(elapsedTime / 1000)}</span>
         </div>
         <div className="field-grid">
-          <Grid width={Width} height={Height} field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
+          <Grid field={UserField} id={1} OnCell={cellclicked} mine={redcell}/>
         </div>
       </div>
       <Stats show={ShowStat} stats={Statistics} time={(elapsedTime / 1000).toFixed(3)}/>

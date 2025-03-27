@@ -1,7 +1,9 @@
 import './Grid.css';
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 
-function Grid({width, height, field, id, OnCell, mine}) {
+function Grid({field, id, OnCell, mine}) {
+    const width = field.length;
+    const height = field[0].length;
     const gridRef = useRef(null);
     useEffect(() => {
         const disable = (e) => e.preventDefault();

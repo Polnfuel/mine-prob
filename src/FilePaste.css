@@ -1,0 +1,9 @@
+.filePaste {
+    display: flex;
+    flex-direction: column;
+}
+
+.pasteItems, .fieldItems {
+    margin-left: 40px;
+    margin-top: 20px;
+}

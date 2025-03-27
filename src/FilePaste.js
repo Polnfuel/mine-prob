@@ -1,4 +1,5 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
+import "./FilePaste.css";
 import Grid from "./Grid";
 
 function get2dArray(data, width) {
@@ -467,22 +468,44 @@ export default function FilePaste(){
     const [bordernums, setBordernums] = useState([]);
     const [unopened, setUnopened] = useState([]);
     const [minesleft, setMinesleft] = useState(99);
+    const [imageUrl, setImageUrl] = useState("");
 
-    const handlePaste = async (event) => {
-        const items = event.clipboardData.items;
-        for (let item of items){
-            if (item.type.startsWith("image/")) {
-                const file = item.getAsFile();
-                const imageData = await readFile(file);
-                const userfield = await processImage(imageData, width, height);
-                setField(userfield);
+    useEffect(() => {
+        setField(Array.from({ length: height }, () =>
+          Array.from({ length: width }, () => null)
+        ));
+    }, [width, height]);
+
+    // const handlePaste = async (event) => {
+    //     const items = event.clipboardData.items;
+    //     for (let item of items){
+    //         if (item.type.startsWith("image/")) {
+    //             const file = item.getAsFile();
+    //             const imageData = await readFile(file);
+    //             const userfield = await processImage(imageData, width, height);
+    //             setField(userfield);
+    //         }
+    //     }
+    // };
+    const urlPaste = async () => {
+        if (!imageUrl) return;
+    
+        try {
+            const response = await fetch(imageUrl, { mode: "cors" });
+            if (!response.ok) throw new Error("Не удалось загрузить изображение");
+    
+            const blob = await response.blob();
+            if (!blob.type.startsWith("image/")) {
+                return;
             }
+    
+            const imageData = await readFile(blob);
+            const userfield = await processImage(imageData, width, height);
+            setField(userfield);
+        } catch (error) {
+            console.error(error);
         }
-    }
-    const setSize = () => {
-        const temp = Array.from({length: height}, () => Array.from({length: width}, () => null) );
-        setField(temp);
-    }
+    };
     function calculate(){
         const [unopenedCells, borderCells, mines] = getData();
         console.log(unopenedCells);
@@ -650,14 +673,21 @@ export default function FilePaste(){
         setField(fld);
     }
     return (
-        <>
-            <div onPaste={handlePaste} style={{border: "5px dashed gray", padding: 20, width: "500px"}}></div>
-            <button type="button" onClick={calculate}>Probs</button>
-            <input style={{width: "50px"}} value={width} type="number" onChange={(e) => setWidth(Number(e.target.value))}/>
-            <input style={{width: "50px"}} value={height} type="number" onChange={(e) => setHeight(Number(e.target.value))} />
-            <input style={{width: "50px"}} value={minesleft} type="number" onChange={(e) => setMinesleft(Number(e.target.value))} />
-            <button type="button" onClick={solve}>Solve</button>
-            <Grid width={height} height={width} field={field} id={3} OnCell={addCell} mine={null} />
-        </>
+        <div className="filePaste">
+            {/* <div onPaste={handlePaste} style={{border: "5px dashed gray", padding: 20, width: "500px"}}></div> */}
+            <div className="pasteItems">
+                <button type="button" onClick={urlPaste}>Paste</button>
+                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Вставьте URL изображения" style={{ width: "300px" }}/>
+                <button type="button" onClick={() => {setImageUrl("");}}>Clear</button>
+            </div>
+            <div className="fieldItems">
+                <button type="button" onClick={calculate}>Probs</button>
+                <input style={{width: "50px"}} value={width} type="text" onChange={(e) => {setWidth(Number(e.target.value))}}/>
+                <input style={{width: "50px"}} value={height} type="text" onChange={(e) => {setHeight(Number(e.target.value))}} />
+                <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(Number(e.target.value))} />
+                <button type="button" onClick={solve}>Solve</button>
+            </div>
+            <Grid field={field} id={3} OnCell={addCell} mine={null} />
+        </div>
     );
 }
