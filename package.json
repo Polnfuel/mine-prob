@@ -2,7 +2,7 @@
   "name": "minesreact",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://Polnfuel.github.io/minesweeper",
+  "homepage": "https://polnfuel.github.io/minesweeper",
   "dependencies": {
     "cra-template": "1.2.0",
     "gh-pages": "^6.3.0",
