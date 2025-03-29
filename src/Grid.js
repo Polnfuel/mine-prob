@@ -1,7 +1,7 @@
 import './Grid.css';
 import React, {useEffect, useRef} from 'react';
 
-function Grid({field, id, OnCell, mine}) {
+function Grid({field, id, OnCell, mine, marking}) {
     const width = field.length;
     const height = field[0].length;
     const gridRef = useRef(null);
@@ -20,6 +20,7 @@ function Grid({field, id, OnCell, mine}) {
         Array.from({length: height}, (_, col) => {
             let content = '';
             let classname;
+            let style;
             if (typeof field[row][col] === 'number'){
                 classname = 'cellprob';
                 if (field[row][col] === 0){
@@ -41,7 +42,19 @@ function Grid({field, id, OnCell, mine}) {
             else {
                 classname = `cell${field[row][col]}`;
             }
-            
+            if (marking){
+                for (let group = 0; group < marking.length; group++){
+                    for (let i = 0; i < 2; i++){
+                        for (let j = 0; j < marking[i].length; j++){
+                            if (marking[i][j][0] === row && marking[i][j][1] === col){
+                                style = "rgb(158, 200, 255)";
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
             if (mine !== null){
                 if (mine[0] === row && mine[1] === col && id === 1){
                     classname += " redcell";
@@ -57,7 +70,7 @@ function Grid({field, id, OnCell, mine}) {
                     content = field[row][col];
             }
             return (
-            <div key={`${row}-${col}`} className='cell' onMouseDown={(e) => {OnCell(row, col, e.button)}}>
+            <div key={`${row}-${col}`} className='cell' style={{backgroundColor: style}} onMouseDown={(e) => {OnCell(row, col, e.button)}}>
                 <span className={classname}>
                     {content}
                 </span>

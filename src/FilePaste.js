@@ -469,6 +469,8 @@ export default function FilePaste(){
     const [unopened, setUnopened] = useState([]);
     const [minesleft, setMinesleft] = useState(99);
     const [imageUrl, setImageUrl] = useState("");
+    const [fullprobs, setFullProbs] = useState(true);
+    const [groups, setGroups] = useState([]);
 
     useEffect(() => {
         if (width > 0 && height > 0){
@@ -478,17 +480,6 @@ export default function FilePaste(){
         }
     }, [width, height]);
 
-    // const handlePaste = async (event) => {
-    //     const items = event.clipboardData.items;
-    //     for (let item of items){
-    //         if (item.type.startsWith("image/")) {
-    //             const file = item.getAsFile();
-    //             const imageData = await readFile(file);
-    //             const userfield = await processImage(imageData, width, height);
-    //             setField(userfield);
-    //         }
-    //     }
-    // };
     const urlPaste = async () => {
         if (!imageUrl) return;
     
@@ -504,14 +495,35 @@ export default function FilePaste(){
             const imageData = await readFile(blob);
             const userfield = await processImage(imageData, width, height);
             setField(userfield);
+            setImageUrl("");
+            setBordernums([]);
+            setUnopened([]);
+            setGroups([]);
         } catch (error) {
             console.error(error);
         }
     };
-    function calculate(){
-        const [unopenedCells, borderCells, mines] = getData();
-        console.log(unopenedCells);
-        console.log(borderCells);
+    function calc(){
+        let fld = field.map(row => [...row]);
+        if (!fullprobs){
+            console.time("Calc");
+            for (let group = 0; group < groups.length; group++){
+                fld = calculate(groups[group], fld);
+            }
+            console.timeEnd("Calc");
+            setField(fld);
+        }
+        else if (fullprobs){
+            console.time("Calc");
+            fld = calculate(getData(), fld);
+            console.timeEnd("Calc");
+            setField(fld);
+        }
+    }
+    function calculate(group, fld){
+        const [unopenedCells, borderCells, mines] = group;
+        //console.log(unopenedCells);
+        //console.log(borderCells);
         const combinations = findValidBombCombinations(unopenedCells, borderCells);
         console.log(combinations);
 
@@ -540,7 +552,6 @@ export default function FilePaste(){
             combs.push([[...combo], weight]);
         });
         //console.log(combs);
-        let fld = field.map(row => [...row]);
         unopenedCells.forEach(cell => {
             let weights = 0;
             combs.forEach(combo => {
@@ -551,19 +562,66 @@ export default function FilePaste(){
             fld[cell[0]][cell[1]] = Math.floor(weights / sumweights * 100);
         });
         //console.log(fld);
-        setField(fld);
+        return fld;
     }
-    function addCell(row, col, button){
-        // if (field[row][col] === "C"){
-        //     let mas = [...unopened];
-        //     mas.push([row, col]);
-        //     setUnopened(mas);
-        // }
-        // else if (field[row][col] !== "C"){
-        //     let mas = [...bordernums];
-        //     mas.push([row, col]);
-        //     setBordernums(mas);
-        // }
+    function division(){
+        let flags = 0;
+        for (let row = 0; row < field.length; row++){
+            for (let col = 0; col < field[0].length; col++){
+                if (field[row][col] === "F"){
+                    flags++;
+                }
+            }
+        }
+        return [unopened, bordernums, minesleft - flags];
+    }
+    function addCell(row, col, b){
+        if (field[row][col] === "C" && GetNumbersCount(row, col, field) > 0){
+            let uo = [...unopened];
+            if (uo.length === 0){
+                uo.push([row, col]);
+            }
+            else{
+                let includes = false;
+                for (let i = 0; i < uo.length; i++){
+                    if (uo[i][0] === row && uo[i][1] === col){
+                        includes = true;
+                    }
+                }
+                if (!includes){
+                    uo.push([row, col]);
+                }
+            }
+            setUnopened(uo);
+        }
+        else if (field[row][col] !== "C" && field[row][col] !== "F" && GetClosedCount(row, col, field) > 0){
+            let b = [...bordernums];
+            if (b.length === 0){
+                b.push([row, col, Number(field[row][col]) - GetFlagCount(row, col, field)]);
+            }
+            else{
+                let includes = false;
+                for (let i = 0; i < b.length; i++){
+                    if (b[i][0] === row && b[i][1] === col){
+                        includes = true;
+                    }
+                }
+                if (!includes){
+                    b.push([row, col, Number(field[row][col]) - GetFlagCount(row, col, field)]);
+                }
+            }
+            setBordernums(b);
+        }
+    }
+    function newGroup(){
+        if (unopened.length > 0 && bordernums.length > 0){
+            let group = division();
+            let gs = [...groups];
+            gs.push(group);
+            setGroups(gs);
+            setUnopened([]);
+            setBordernums([]);
+        }
     }
     function getData(){
         let unopened = [];
@@ -676,20 +734,23 @@ export default function FilePaste(){
     }
     return (
         <div className="filePaste">
-            {/* <div onPaste={handlePaste} style={{border: "5px dashed gray", padding: 20, width: "500px"}}></div> */}
             <div className="pasteItems">
                 <button type="button" onClick={urlPaste}>Paste</button>
                 <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>
-                <button type="button" onClick={() => {setImageUrl("");}}>Clear</button>
             </div>
             <div className="fieldItems">
-                <button type="button" onClick={calculate}>Probs</button>
+                <button type="button" onClick={calc}>Probs</button>
                 <input style={{width: "50px"}} value={width} type="text" onChange={(e) => {setWidth(Number(e.target.value))}}/>
                 <input style={{width: "50px"}} value={height} type="text" onChange={(e) => {setHeight(Number(e.target.value))}} />
                 <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(Number(e.target.value))} />
                 <button type="button" onClick={solve}>Solve</button>
             </div>
-            <Grid field={field} id={3} OnCell={addCell} mine={null} />
+            <div className="probsItems">
+                <input className="form-check-input" type="checkbox" id="probsCheckBox" checked={fullprobs} onChange={() => setFullProbs(!fullprobs)}/>
+                <label className="form-check-label" htmlFor="probsCheckBox">Full Probs</label>
+                <button type="button" onClick={newGroup}>+</button>
+            </div>
+            <Grid field={field} id={3} OnCell={addCell} mine={null} marking={[unopened, bordernums]} />
         </div>
     );
 }

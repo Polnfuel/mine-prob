@@ -6,7 +6,7 @@ export default function Routing() {
     return (
         <Router>
             <div className="d-flex" style={{ height: "100vh" }}>
-                <div className="bg-light border-end p-3" style={{ width: "200px" }}>
+                <div className="bg-light border-end p-3" style={{ width: "150px" }}>
                   <h5>Menu</h5>
                   <ul className="nav flex-column">
                     <li className="nav-item">
@@ -17,7 +17,6 @@ export default function Routing() {
                     </li>
                   </ul>
                 </div>
-                {/* Page Content */}
                 <div className="flex-grow-1 p-3">
                   <Routes>
                     <Route path="/minesweeper" element={<App />} />
