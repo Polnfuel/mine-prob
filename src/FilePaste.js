@@ -58,10 +58,10 @@ function toone(row, col, width){
     return (row * width + col);
 }
 function GetNeigh(cell, field){
-  let mas = [];
-  let width = field[0].length;
-  let height = field.length;
-  if (Math.floor(cell / width) === 0)
+    let mas = [];
+    let width = field[0].length;
+    let height = field.length;
+    if (Math.floor(cell / width) === 0)
     {
         if (cell === 0)
         {
@@ -107,6 +107,19 @@ function GetNeigh(cell, field){
         }
     }
     return mas;
+}
+function getNeighbors(cell, field){
+    let mas = [];
+    let neis = [];
+    const x = cell[0];
+    const y = cell[1];
+    mas = [[x-1, y-1], [x, y-1], [x+1, y-1], [x-1, y], [x+1, y], [x-1, y+1], [x, y+1], [x+1, y+1]];
+    mas.forEach(coord => {
+        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
+            neis.push(coord);
+        }
+    });
+    return neis;
 }
 const loadImage = (src) => {
     return new Promise((resolve, reject) => {
@@ -503,24 +516,128 @@ export default function FilePaste(){
             console.error(error);
         }
     };
+    function makeGroup(uo, bc, uochecked, bcchecked){
+        for (let u = uochecked; u < uo.length; u++){
+            let neis = getNeighbors(uo[u], field);
+            neis.forEach(nei => {
+                if (Number(field[nei[0]][nei[1]]) > 0){
+                    let contains = false;
+                    for (let b = 0; b < bc.length; b++){
+                        if (nei[0] === bc[b][0] && nei[1] === bc[b][1]){
+                            contains = true;
+                            break;
+                        }
+                    }
+                    if (!contains){
+                        bc.push(nei);
+                    }
+                }
+            });
+            uochecked += 1;
+        }
+        for (let b = bcchecked; b < bc.length; b++){
+            let neis = getNeighbors(bc[b], field);
+            neis.forEach(nei => {
+                if (field[nei[0]][nei[1]] === "C"){
+                    let contains = false;
+                    for (let u = 0; u < uo.length; u++){
+                        if (nei[0] === uo[u][0] && nei[1] === uo[u][1]){
+                            contains = true;
+                            break;
+                        }
+                    }
+                    if (!contains){
+                        uo.push(nei);
+                    }
+                }
+            });
+            bcchecked += 1;
+        }
+        if (bcchecked === bc.length && uochecked === uo.length){
+            return [uo, bc, uochecked, bcchecked];
+        }
+        else{
+            [uo, bc, uochecked, bcchecked] = makeGroup(uo, bc, uochecked, bcchecked);
+            if (bcchecked === bc.length && uochecked === uo.length){
+                return [uo, bc, uochecked, bcchecked];
+            }
+        }
+    }
+    function makeGroups(){
+        const [unopenedCells, borderCells, mines] = getData();
+        let gs = [];
+        let uogroupsLength = 0;
+        while(uogroupsLength < unopenedCells.length) {
+            let uoStart;
+            if (gs.length !== 0) {
+                let quit;
+                for (let uoc = 0; uoc < unopenedCells.length; uoc++){
+                    quit = false;
+                    for (let g = 0; g < gs.length; g++){
+                        for (let uog = 0; uog < gs[g][0].length; uog++){
+                            if (gs[g][0][uog][0] === unopenedCells[uoc][0] && gs[g][0][uog][1] === unopenedCells[uoc][1]){
+                                quit = true;
+                                break;
+                            }
+                        }
+                        if (quit){
+                            break;
+                        }
+                    }
+                    if (!quit) {
+                        uoStart = unopenedCells[uoc];
+                        break;
+                    }
+                }
+            }
+            else {
+                uoStart = unopenedCells[0];
+            }
+            let uo = [uoStart];
+            let bc = [];
+            let uochecked = 0;
+            let bcchecked = 0;
+            let [uogroup, bcgroup] = makeGroup(uo, bc, uochecked, bcchecked);
+            for (let bc = 0; bc < bcgroup.length; bc++){
+                for (let border = 0; border < borderCells.length; border++){
+                    if (bcgroup[bc][0] === borderCells[border][0] && bcgroup[bc][1] === borderCells[border][1]){
+                        bcgroup[bc].push(borderCells[border][2]);
+                        break;
+                    }
+                }
+            }
+            uogroupsLength += uogroup.length;
+            gs.push([uogroup, bcgroup, mines]);
+        }
+        setGroups(gs);
+        return gs;
+    }
     function calc(){
         let fld = field.map(row => [...row]);
         if (!fullprobs){
             console.time("Calc");
-            for (let group = 0; group < groups.length; group++){
-                fld = calculate(groups[group], fld);
+            if (groups.length > 0){
+                for (let group = 0; group < groups.length; group++){
+                    fld = calculateGroup(groups[group], fld);
+                }
+            }
+            else {
+                const groups = makeGroups();
+                for (let group = 0; group < groups.length; group++){
+                    fld = calculateGroup(groups[group], fld);
+                }
             }
             console.timeEnd("Calc");
             setField(fld);
         }
         else if (fullprobs){
             console.time("Calc");
-            fld = calculate(getData(), fld);
+            fld = calculateGroup(getData(), fld);
             console.timeEnd("Calc");
             setField(fld);
         }
     }
-    function calculate(group, fld){
+    function calculateGroup(group, fld){
         const [unopenedCells, borderCells, mines] = group;
         //console.log(unopenedCells);
         //console.log(borderCells);
