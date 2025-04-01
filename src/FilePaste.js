@@ -151,9 +151,7 @@ async function processImage(image, width, height) {
 
     let array = get2dArray(pixels, img.width);
 
-    //console.log(array);
     const userfield = getUserField(array, width, height);
-    console.log(userfield);
     return userfield;
 }
 
@@ -475,8 +473,8 @@ function GetClosedCount(i, j, field){
 }
 
 export default function FilePaste(){
-    const [height, setHeight] = useState(16);
-    const [width, setWidth] = useState(30);
+    const [height, setHeight] = useState("16");
+    const [width, setWidth] = useState("30");
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
     const [bordernums, setBordernums] = useState([]);
     const [unopened, setUnopened] = useState([]);
@@ -484,14 +482,6 @@ export default function FilePaste(){
     const [imageUrl, setImageUrl] = useState("");
     const [fullprobs, setFullProbs] = useState(true);
     const [groups, setGroups] = useState([]);
-
-    useEffect(() => {
-        if (width > 0 && height > 0){
-            setField(Array.from({ length: height }, () =>
-                Array.from({ length: width }, () => null)
-              ));
-        }
-    }, [width, height]);
 
     const urlPaste = async () => {
         if (!imageUrl) return;
@@ -678,7 +668,6 @@ export default function FilePaste(){
             });
             fld[cell[0]][cell[1]] = Math.floor(weights / sumweights * 100);
         });
-        //console.log(fld);
         return fld;
     }
     function division(){
@@ -840,7 +829,6 @@ export default function FilePaste(){
             }
         }
         return fld;
-        //setField(fld);
     }
     function solve(){
         let fld = field.map(row => [...row]);
@@ -848,6 +836,16 @@ export default function FilePaste(){
         fld = solveOneTime(fld);
         fld = solveOneTime(fld, true);
         setField(fld);
+    }
+    function setSize(){
+        if (width >= 5 && height >= 5 && width <= 100 && height <= 100){
+            setField(Array.from({ length: height }, () =>
+                Array.from({ length: width }, () => null)
+            ));
+        }
+        if (minesleft > width * height){
+            setMinesleft(String(width * height));
+        }
     }
     return (
         <div className="filePaste">
@@ -857,10 +855,10 @@ export default function FilePaste(){
             </div>
             <div className="fieldItems">
                 <button type="button" onClick={calc}>Probs</button>
-                <input style={{width: "50px"}} value={width} type="text" onChange={(e) => {setWidth(Number(e.target.value))}}/>
-                <input style={{width: "50px"}} value={height} type="text" onChange={(e) => {setHeight(Number(e.target.value))}} />
-                <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(Number(e.target.value))} />
-                <button type="button" onClick={solve}>Solve</button>
+                <input style={{width: "50px"}} value={width} type="text" onChange={(e) => setWidth(e.target.value)}/>
+                <input style={{width: "50px"}} value={height} type="text" onChange={(e) => setHeight(e.target.value)} />
+                <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)} />
+                <button type="button" onClick={setSize}>⟲</button>
             </div>
             <div className="probsItems">
                 <input className="form-check-input" type="checkbox" id="probsCheckBox" checked={fullprobs} onChange={() => setFullProbs(!fullprobs)}/>
