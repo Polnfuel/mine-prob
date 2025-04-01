@@ -155,35 +155,28 @@ async function processImage(image, width, height) {
     return userfield;
 }
 
-function findValidBombCombinations(unopenedCells, borderCellsWithNumbers) {
+function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesleft) {
     const combinations = [];
 
-    // Возвращает соседние клетки для данной клетки
-    function getNeighbors(cell) {
-        const [x, y] = cell;
-        return [
-            [x - 1, y - 1], [x - 1, y], [x - 1, y + 1],
-            [x, y - 1],             [x, y + 1],
-            [x + 1, y - 1], [x + 1, y], [x + 1, y + 1]
-        ];
-    }
-
-    // Проверяет, удовлетворяет ли текущая комбинация всем граничным клеткам
     function isCombinationValid(bombCombination) {
         for (const [x, y, number] of borderCellsWithNumbers) {
-            const neighbors = getNeighbors([x, y]);
-            const bombCount = neighbors.filter(neighbor =>
-                bombCombination.some(bomb => bomb[0] === neighbor[0] && bomb[1] === neighbor[1])
-            ).length;
-            if (bombCount !== number) {
-                return false; // Если число бомб не совпадает, комбинация недопустима
+            let bombCount = 0;
+            for (const [bx, by] of bombCombination) {
+                if (
+                    (bx >= x - 1 && bx <= x + 1) &&
+                    (by >= y - 1 && by <= y + 1)
+                ) {
+                    bombCount++;
+                }
             }
+            if (bombCount !== number) return false;
         }
         return true;
     }
 
-    // Рекурсивная функция для генерации комбинаций
-    function backtrack(index, currentCombination) {
+    function backtrack(index, currentCombination, remainingMines) {
+        if (currentCombination.length > minesleft) return; 
+        
         if (index === unopenedCells.length) {
             if (isCombinationValid(currentCombination)) {
                 combinations.push([...currentCombination]);
@@ -191,16 +184,16 @@ function findValidBombCombinations(unopenedCells, borderCellsWithNumbers) {
             return;
         }
 
-        // Рассматриваем текущую клетку как бомбу
-        currentCombination.push(unopenedCells[index]);
-        backtrack(index + 1, currentCombination);
-        currentCombination.pop();
-
-        // Рассматриваем текущую клетку как пустую
-        backtrack(index + 1, currentCombination);
+        if (remainingMines > 0) {
+            currentCombination.push(unopenedCells[index]);
+            backtrack(index + 1, currentCombination, remainingMines - 1);
+            currentCombination.pop();
+        }
+        
+        backtrack(index + 1, currentCombination, remainingMines);
     }
 
-    backtrack(0, []);
+    backtrack(0, [], minesleft);
     return combinations;
 }
 
@@ -480,7 +473,7 @@ export default function FilePaste(){
     const [unopened, setUnopened] = useState([]);
     const [minesleft, setMinesleft] = useState(99);
     const [imageUrl, setImageUrl] = useState("");
-    const [fullprobs, setFullProbs] = useState(true);
+    const [fullprobs, setFullProbs] = useState(false);
     const [groups, setGroups] = useState([]);
 
     const urlPaste = async () => {
@@ -631,7 +624,7 @@ export default function FilePaste(){
         const [unopenedCells, borderCells, mines] = group;
         //console.log(unopenedCells);
         //console.log(borderCells);
-        const combinations = findValidBombCombinations(unopenedCells, borderCells);
+        const combinations = findValidBombCombinations(unopenedCells, borderCells, mines);
         console.log(combinations);
 
         let floatingtiles = 0;
