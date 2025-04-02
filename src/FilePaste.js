@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useState} from "react";
 import "./FilePaste.css";
 import Grid from "./Grid";
 
@@ -138,7 +138,7 @@ const readFile = (file) => {
       reader.readAsDataURL(file);
     });
 };
-async function processImage(image, width, height) {
+async function processImage(image) {
     const img = await loadImage(image);
 
     const canvas = document.createElement("canvas");
@@ -151,8 +151,11 @@ async function processImage(image, width, height) {
 
     let array = get2dArray(pixels, img.width);
 
+    let width = (img.width - 39) / 26;
+    let height = (img.height - 106) / 26;
+
     const userfield = getUserField(array, width, height);
-    return userfield;
+    return [userfield, width, height];
 }
 
 function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesleft) {
@@ -471,7 +474,7 @@ export default function FilePaste(){
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
     const [bordernums, setBordernums] = useState([]);
     const [unopened, setUnopened] = useState([]);
-    const [minesleft, setMinesleft] = useState(99);
+    const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
     const [fullprobs, setFullProbs] = useState(false);
     const [groups, setGroups] = useState([]);
@@ -489,8 +492,10 @@ export default function FilePaste(){
             }
     
             const imageData = await readFile(blob);
-            const userfield = await processImage(imageData, width, height);
+            const [userfield, w, h] = await processImage(imageData);
             setField(userfield);
+            setWidth(w);
+            setHeight(h);
             setImageUrl("");
             setBordernums([]);
             setUnopened([]);
