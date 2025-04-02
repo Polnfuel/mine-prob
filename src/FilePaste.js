@@ -23,90 +23,42 @@ function getUserField(array, width, height){
             const pixel = array[j][i];
             if (JSON.stringify(pixel) === JSON.stringify([198, 198, 198, 255])){
                 if (JSON.stringify(array[j][i - 13]) === JSON.stringify([255, 255, 255, 255])){
-                    userfield[h][w] = "C";
+                    userfield[h][w] = "C"; continue;
+                }
+                else if (JSON.stringify(array[j - 6][i]) === JSON.stringify([0, 0, 0, 255])) {
+                    userfield[h][w] = "7"; continue;
                 }
                 else {
-                    userfield[h][w] = "0";
+                    userfield[h][w] = "0"; continue;
                 }
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 247, 255])){
-                userfield[h][w] = "1";
+                userfield[h][w] = "1"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 119, 0, 255])){
-                userfield[h][w] = "2";
+                userfield[h][w] = "2"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([236, 0, 0, 255])){
-                userfield[h][w] = "3";
+                userfield[h][w] = "3"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 128, 255])){
-                userfield[h][w] = "4";
+                userfield[h][w] = "4"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([128, 0, 0, 255])){
-                userfield[h][w] = "5";
+                userfield[h][w] = "5"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 128, 128, 255])){
-                userfield[h][w] = "6";
+                userfield[h][w] = "6"; continue;
+            }
+            else if (JSON.stringify(pixel) === JSON.stringify([112, 112, 112, 255])){
+                userfield[h][w] = "8"; continue;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([100, 100, 100, 255])){
-                userfield[h][w] = "F";
+                userfield[h][w] = "F"; continue;
             }
         }
     }
     return userfield;
-}
-function toone(row, col, width){
-    return (row * width + col);
-}
-function GetNeigh(cell, field){
-    let mas = [];
-    let width = field[0].length;
-    let height = field.length;
-    if (Math.floor(cell / width) === 0)
-    {
-        if (cell === 0)
-        {
-            mas = [1, width, width + 1];
-        }
-        else if (cell === width - 1)
-        {
-            mas = [cell - 1, cell - 1 + width, cell + width];
-        }
-        else
-        {
-            mas = [cell - 1, cell + 1, cell - 1 + width, cell + width, cell + 1 + width];
-        }
-    }
-    else if (Math.floor(cell / width) === height - 1)
-    {
-        if (cell === (height - 1) * width)
-        {
-            mas = [cell - width, cell - width + 1, cell + 1];
-        }
-        else if (cell === height * width - 1)
-        {
-            mas = [cell - 1, cell - width - 1, cell - width];
-        }
-        else
-        {
-            mas = [cell - 1, cell + 1, cell - width + 1, cell - width - 1, cell - width];
-        }
-    }
-    else
-    {
-        if (cell % width === 0)
-        {
-            mas = [cell - width, cell - width + 1, cell + 1, cell + width, cell + width + 1];
-        }
-        else if (cell % width === width - 1)
-        {
-            mas = [cell - width - 1, cell - width, cell - 1, cell + width - 1, cell + width];
-        }
-        else
-        {
-            mas = [cell - width - 1, cell - width, cell - width + 1, cell - 1, cell + 1, cell + width - 1, cell + width, cell + width + 1];
-        }
-    }
-    return mas;
 }
 function getNeighbors(cell, field){
     let mas = [];
@@ -198,108 +150,6 @@ function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesl
 
     backtrack(0, [], minesleft);
     return combinations;
-}
-
-function reducing(matrix, solution) {
-    for (let i = 0; i < matrix.length; i++){
-        if (matrix[i].at(-1) === 0){
-            let nonzerocount = 0;
-            let onescount = 0;
-            let indeces = [];
-            for (let j = 0; j < matrix[i].length - 1; j++){
-                if (matrix[i][j] !== 0) {
-                    nonzerocount++;
-                    indeces.push(j);
-                } 
-                if (matrix[i][j] === 1) {
-                    onescount++;
-                } 
-            }
-            if (nonzerocount === 1){
-                for (let m = 0; m < matrix.length; m++){
-                    matrix[m][indeces[0]] = 0;
-                }
-                solution[indeces[0]] = 0;
-            }
-            else if (onescount === nonzerocount){
-                for (let m = 0; m < matrix.length; m++){
-                    for (let n = 0; n < indeces.length; n++){
-                        matrix[m][indeces[n]] = 0;
-                        solution[indeces[0]] = 0;
-                    }
-                }
-            }
-        }
-    }
-    return [matrix, solution];
-}
-
-function finding(matrix, solution) {
-    for (let i = 0; i < matrix.length; i++){
-        if (matrix[i].at(-1) === 1){
-            let onescount = 0;
-            let index = -1;
-            for (let j = 0; j < matrix[i].length - 1; j++){
-                if (matrix[i][j] === 1) {
-                    onescount++;
-                    if (index === -1){
-                        index = j;
-                    }
-                    else {
-                        break;
-                    }
-                }
-            }
-            if (onescount === 1){
-                solution[index] = 1;
-            }
-        }
-    }
-    return solution;
-}
-
-function solveSystem(matrix) {
-    let rows = matrix.length;
-    let cols = matrix[0].length - 1;
-    let zero = 0;
-
-    // Прямой ход метода Гаусса
-    for (let col = 0; col < cols; col++) {
-        let pivotRow = -1;
-        for (let i = zero; i < rows; i++) {
-            if (matrix[i][col] !== 0) {
-                pivotRow = i;
-                break;
-            }
-        }
-        if (pivotRow === -1) continue;
-        
-        [matrix[zero], matrix[pivotRow]] = [matrix[pivotRow], matrix[zero]];
-        
-        if (matrix[zero][col] !== 0) {
-            for (let i = 0; i < rows; i++) {
-                if (i === zero || matrix[i][col] === 0) continue;
-                let factor = matrix[i][col] / matrix[zero][col];
-                for (let j = col; j <= cols; j++) {
-                    matrix[i][j] -= factor * matrix[zero][j];
-                }
-            }
-            zero++;
-        }
-    }
-    // console.log(matrix);
-
-    let solution = Array.from({length: matrix[0].length - 1}, () => null);
-
-    [matrix, solution] = reducing(matrix, solution);
-    [matrix, solution] = reducing(matrix, solution);
-    [matrix, solution] = reducing(matrix, solution);
-    [matrix, solution] = reducing(matrix, solution);
-    [matrix, solution] = reducing(matrix, solution);
-    
-    console.log(matrix);
-    solution = finding(matrix, solution);
-    return solution;
 }
 
 function GetFlagCount(i, j, field){
@@ -745,95 +595,6 @@ export default function FilePaste(){
             }
         }
         return [unopened, borders, minesleft - flags];
-    }
-    function getSpecialData(fld) {
-        let unopened = [];
-        let borders = [];
-        let flags = 0;
-        for (let row = 0; row < fld.length; row++){
-            for (let col = 0; col < fld[0].length; col++){
-                if (fld[row][col] === "C" && GetNumbersCount(row, col, fld) > 0){
-                    unopened.push([row, col]);
-                }
-                if (fld[row][col] !== "C" && fld[row][col] !== "F" && GetClosedCount(row, col, fld) > 0){
-                    borders.push([row, col, Number(fld[row][col]) - GetFlagCount(row, col, fld)])
-                }
-                if (fld[row][col] === "F"){
-                    flags++;
-                }
-            }
-        }
-        return [unopened, borders, 99 - flags];
-    }
-    function trivial(fld, borderCells) {
-        borderCells.forEach(cell => {
-            if (cell[2] === 0){
-                let neigs = GetNeigh(toone(cell[0], cell[1], fld[0].length), fld);
-                neigs.forEach(nei => {
-                    if (fld[Math.floor(nei / fld[0].length)][nei % fld[0].length] === "C"){
-                        fld[Math.floor(nei / fld[0].length)][nei % fld[0].length] = 0;
-                    }
-                });
-            }
-            else if (GetClosedCount(cell[0], cell[1], fld) === cell[2]){
-                let neigs = GetNeigh(toone(cell[0], cell[1], fld[0].length), fld);
-                neigs.forEach(nei => {
-                    if (fld[Math.floor(nei / fld[0].length)][nei % fld[0].length] === "C"){
-                        fld[Math.floor(nei / fld[0].length)][nei % fld[0].length] = "F";
-                    }
-                });
-            }
-        });
-        return fld;
-    }
-    function solveOneTime(fld, toProb=false){
-        const [unopenedCells, borderCells, mines] = getSpecialData(fld);
-        console.log(unopenedCells);
-        console.log(borderCells);
-        fld = trivial(fld, borderCells);
-
-        let matrix = Array.from({length: borderCells.length}, () => Array.from({length: unopenedCells.length + 1}, () => 0));
-        for (let j = 0; j < borderCells.length; j++){
-            let neighbors = GetNeigh(toone(borderCells[j][0], borderCells[j][1], fld[0].length), fld);
-            for (let i = 0; i < unopenedCells.length; i++){
-                if (neighbors.includes(toone(unopenedCells[i][0], unopenedCells[i][1], fld[0].length))){
-                    matrix[j][i] = 1;
-                }
-            }
-            matrix[j][unopenedCells.length] = borderCells[j][2];
-        }
-
-        let solution = solveSystem(matrix.map(row => [...row]));
-        console.log(solution);
-
-        if (toProb) {
-            for (let i = 0; i < solution.length; i++){
-                if (solution[i] === 1) {
-                    fld[unopenedCells[i][0]][unopenedCells[i][1]] = 100;
-                }
-                if (solution[i] === 0) {
-                    fld[unopenedCells[i][0]][unopenedCells[i][1]] = 0;
-                }
-            }
-        }
-        else {
-            for (let i = 0; i < solution.length; i++){
-                if (solution[i] === 1) {
-                    fld[unopenedCells[i][0]][unopenedCells[i][1]] = "F";
-                }
-                if (solution[i] === 0){
-                    fld[unopenedCells[i][0]][unopenedCells[i][1]] = 0;
-                }
-            }
-        }
-        return fld;
-    }
-    function solve(){
-        let fld = field.map(row => [...row]);
-        fld = solveOneTime(fld);
-        fld = solveOneTime(fld);
-        fld = solveOneTime(fld, true);
-        setField(fld);
     }
     function setSize(){
         if (width >= 5 && height >= 5 && width <= 100 && height <= 100){
