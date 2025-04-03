@@ -1,7 +1,7 @@
 import './Grid.css';
 import React, {useEffect, useRef} from 'react';
 
-function Grid({field, id, OnCell, mine, marking}) {
+function Grid({field, id, OnCell, mine, marking, fl}) {
     const width = field.length;
     const height = field[0].length;
     const gridRef = useRef(null);
@@ -15,7 +15,14 @@ function Grid({field, id, OnCell, mine, marking}) {
             grid.removeEventListener('contextmenu', disable);
         };  
     });
-    
+    function include(arr, cell){
+        for (let i = 0; i < arr.length; i++){
+            if (JSON.stringify(arr[i]) === JSON.stringify(cell)){
+                return true;
+            }
+        }
+        return false;
+    }
     const rows = Array.from({length: width}, (_, row) => 
         Array.from({length: height}, (_, col) => {
             let content = '';
@@ -23,7 +30,10 @@ function Grid({field, id, OnCell, mine, marking}) {
             let style;
             if (typeof field[row][col] === 'number'){
                 classname = 'cellprob';
-                if (field[row][col] === 0){
+                if (include(fl, [row, col])){
+                    classname += " flprob";
+                }
+                else if (field[row][col] === 0){
                     classname += " zeroprob";
                 }
                 else if (field[row][col] < 15){

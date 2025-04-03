@@ -60,6 +60,9 @@
 .cell:has(span.zeroprob) {
     background-color: #56ff8e;
 }
+.cell span.flprob {
+    color: #7e7d7d;
+}
 .cell span.lowprob {
     color: #00882d;
 }

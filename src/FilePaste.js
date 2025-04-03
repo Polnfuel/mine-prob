@@ -328,6 +328,7 @@ export default function FilePaste(){
     const [imageUrl, setImageUrl] = useState("");
     const [fullprobs, setFullProbs] = useState(false);
     const [groups, setGroups] = useState([]);
+    const [floatingtiles, setFloatingtiles] = useState([]);
 
     const urlPaste = async () => {
         if (!imageUrl) return;
@@ -482,16 +483,25 @@ export default function FilePaste(){
         const combinations = findValidBombCombinations(unopenedCells, borderCells, mines);
         console.log(combinations);
 
-        let floatingtiles = 0;
+        let fltiles = [];
+        for (let i = 0; i < fld.length; i++) {
+            for (let j = 0; j < fld[0].length; j++){
+                if (fld[i][j] === "C" && GetNumbersCount(i, j, fld) === 0){
+                    fltiles.push([i, j]);
+                }
+            }
+        }
+        setFloatingtiles(fltiles);
+        let closedtiles = 0;
         field.forEach(row => {
             row.forEach(cell => {
                 if (cell === "C"){
-                    floatingtiles++;
+                    closedtiles++;
                 }
             });
         });
-        //console.log(floatingtiles);
-        const density = mines / floatingtiles;
+        //console.log(closedtiles);
+        const density = mines / closedtiles;
         //console.log(density);
         const mvalue = (1 - density) / density;
         //console.log(mvalue);
@@ -499,14 +509,34 @@ export default function FilePaste(){
         combinations.forEach(combo => {
             if (combo.length > maxcount) maxcount = combo.length;
         });
+        const floatingtiles = closedtiles - unopenedCells.length;
+
         let combs = [];
         let sumweights = 0;
+        let sumweightsFl = 0;
+        let weightsFl = 0;
+        function C(fl, m){
+            let result = 1;
+            for (let i = 0; i < m; i++){
+                result = result * (fl - i) / (i + 1);
+            }
+            return result;
+        }
         combinations.forEach(combo => {
             const weight = 1 * (mvalue**(maxcount-combo.length));
             sumweights += weight;
+            const flCount = weight * C(floatingtiles, mines - combo.length); 
+            sumweightsFl += flCount;
+            weightsFl += flCount * (mines - combo.length) / floatingtiles;
             combs.push([[...combo], weight]);
         });
         //console.log(combs);
+        if (fullprobs){
+            const flProb = weightsFl / sumweightsFl;
+            fltiles.forEach(tile => {
+                fld[tile[0]][tile[1]] = Math.floor(flProb * 100);
+            });
+        }
         unopenedCells.forEach(cell => {
             let weights = 0;
             combs.forEach(combo => {
@@ -624,7 +654,7 @@ export default function FilePaste(){
                 <label className="form-check-label" htmlFor="probsCheckBox">Full Probs</label>
                 <button type="button" onClick={newGroup}>+</button>
             </div>
-            <Grid field={field} id={3} OnCell={addCell} mine={null} marking={[unopened, bordernums]} />
+            <Grid field={field} id={3} OnCell={addCell} mine={null} marking={[unopened, bordernums]} fl={floatingtiles} />
         </div>
     );
 }
