@@ -7,7 +7,7 @@ function get2dArray(data, width) {
     let row = [];
     for (let i = 0; i < data.length; i += 4){
         row.push([data[i], data[i+1], data[i+2], data[i+3]]);
-        if ((i / 4 + 1) % width == 0){
+        if ((i / 4 + 1) % width === 0){
             array.push(row);
             row = [];
         }
@@ -23,38 +23,38 @@ function getUserField(array, width, height){
             const pixel = array[j][i];
             if (JSON.stringify(pixel) === JSON.stringify([198, 198, 198, 255])){
                 if (JSON.stringify(array[j][i - 13]) === JSON.stringify([255, 255, 255, 255])){
-                    userfield[h][w] = "C"; continue;
+                    userfield[h][w] = "C";
                 }
                 else if (JSON.stringify(array[j - 6][i]) === JSON.stringify([0, 0, 0, 255])) {
-                    userfield[h][w] = "7"; continue;
+                    userfield[h][w] = "7";
                 }
                 else {
-                    userfield[h][w] = "0"; continue;
+                    userfield[h][w] = "0";
                 }
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 247, 255])){
-                userfield[h][w] = "1"; continue;
+                userfield[h][w] = "1";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 119, 0, 255])){
-                userfield[h][w] = "2"; continue;
+                userfield[h][w] = "2";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([236, 0, 0, 255])){
-                userfield[h][w] = "3"; continue;
+                userfield[h][w] = "3";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 128, 255])){
-                userfield[h][w] = "4"; continue;
+                userfield[h][w] = "4";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([128, 0, 0, 255])){
-                userfield[h][w] = "5"; continue;
+                userfield[h][w] = "5";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 128, 128, 255])){
-                userfield[h][w] = "6"; continue;
+                userfield[h][w] = "6";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([112, 112, 112, 255])){
-                userfield[h][w] = "8"; continue;
+                userfield[h][w] = "8";
             }
             else if (JSON.stringify(pixel) === JSON.stringify([100, 100, 100, 255])){
-                userfield[h][w] = "F"; continue;
+                userfield[h][w] = "F";
             }
         }
     }
@@ -151,168 +151,41 @@ function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesl
     backtrack(0, [], minesleft);
     return combinations;
 }
-
 function GetFlagCount(i, j, field){
     let count = 0;
-    let mas;
-    if (i === 0)
-        {
-            if (j === 0)
-            {
-                mas = [ field[i + 1][j + 1], field[i][j + 1], field[i + 1][j] ];
+    let mas = [];
+    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
+    mas.forEach(coord => {
+        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
+            if (field[coord[0]][coord[1]] === "F"){
+                count++;
             }
-            else if (j === field[0].length - 1)
-            {
-                mas = [ field[i + 1][j - 1], field[i][j - 1], field[i + 1][j] ];
-            }
-            else
-            {
-                mas = [field[i + 1][j - 1], field[i][j - 1], field[i + 1][j], field[i + 1][j + 1], field[i][j + 1]];
-            }
-        }
-        else if (i === field.length - 1)
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j] ];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j] ];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1] ];
-            }
-        }
-        else
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j], field[i + 1][j + 1], field[i + 1][j]];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i + 1][j - 1], field[i + 1][j]];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1], field[i + 1][j + 1], field[i + 1][j - 1], field[i + 1][j]];
-            }
-        }
-    mas.forEach(cell => {
-        if (cell === "F"){
-            count++;
         }
     });
     return count;
 }
 function GetNumbersCount(i, j, field){
     let count = 0;
-    let mas;
-    if (i === 0)
-        {
-            if (j === 0)
-            {
-                mas = [ field[i + 1][j + 1], field[i][j + 1], field[i + 1][j] ];
+    let mas = [];
+    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
+    mas.forEach(coord => {
+        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
+            if (field[coord[0]][coord[1]] !== "F" && field[coord[0]][coord[1]] !== "C"){
+                count++;
             }
-            else if (j === field[0].length - 1)
-            {
-                mas = [ field[i + 1][j - 1], field[i][j - 1], field[i + 1][j] ];
-            }
-            else
-            {
-                mas = [field[i + 1][j - 1], field[i][j - 1], field[i + 1][j], field[i + 1][j + 1], field[i][j + 1]];
-            }
-        }
-        else if (i === field.length - 1)
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j] ];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j] ];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1] ];
-            }
-        }
-        else
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j], field[i + 1][j + 1], field[i + 1][j]];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i + 1][j - 1], field[i + 1][j]];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1], field[i + 1][j + 1], field[i + 1][j - 1], field[i + 1][j]];
-            }
-        }
-    mas.forEach(cell => {
-        if (cell !== "F" && cell != "C"){
-            count++;
         }
     });
     return count;
 }
 function GetClosedCount(i, j, field){
     let count = 0;
-    let mas;
-    if (i === 0)
-        {
-            if (j === 0)
-            {
-                mas = [ field[i + 1][j + 1], field[i][j + 1], field[i + 1][j] ];
+    let mas = [];
+    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
+    mas.forEach(coord => {
+        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
+            if (field[coord[0]][coord[1]] === "C"){
+                count++;
             }
-            else if (j === field[0].length - 1)
-            {
-                mas = [ field[i + 1][j - 1], field[i][j - 1], field[i + 1][j] ];
-            }
-            else
-            {
-                mas = [field[i + 1][j - 1], field[i][j - 1], field[i + 1][j], field[i + 1][j + 1], field[i][j + 1]];
-            }
-        }
-        else if (i === field.length - 1)
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j] ];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j] ];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1] ];
-            }
-        }
-        else
-        {
-            if (j === 0)
-            {
-                mas = [field[i - 1][j + 1], field[i][j + 1], field[i - 1][j], field[i + 1][j + 1], field[i + 1][j]];
-            }
-            else if (j === field[0].length - 1)
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i + 1][j - 1], field[i + 1][j]];
-            }
-            else
-            {
-                mas = [field[i - 1][j - 1], field[i][j - 1], field[i - 1][j], field[i - 1][j + 1], field[i][j + 1], field[i + 1][j + 1], field[i + 1][j - 1], field[i + 1][j]];
-            }
-        }
-    mas.forEach(cell => {
-        if (cell === "C"){
-            count++;
         }
     });
     return count;
@@ -322,11 +195,8 @@ export default function FilePaste(){
     const [height, setHeight] = useState("16");
     const [width, setWidth] = useState("30");
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
-    const [bordernums, setBordernums] = useState([]);
-    const [unopened, setUnopened] = useState([]);
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
-    const [fullprobs, setFullProbs] = useState(false);
     const [groups, setGroups] = useState([]);
     const [floatingtiles, setFloatingtiles] = useState([]);
 
@@ -348,8 +218,6 @@ export default function FilePaste(){
             setWidth(w);
             setHeight(h);
             setImageUrl("");
-            setBordernums([]);
-            setUnopened([]);
             setGroups([]);
         } catch (error) {
             console.error(error);
@@ -451,161 +319,99 @@ export default function FilePaste(){
         setGroups(gs);
         return gs;
     }
-    function calc(){
+    function calculation(){
         let fld = field.map(row => [...row]);
-        if (!fullprobs){
-            console.time("Calc");
-            if (groups.length > 0){
-                for (let group = 0; group < groups.length; group++){
-                    fld = calculateGroup(groups[group], fld);
-                }
-            }
-            else {
-                const groups = makeGroups();
-                for (let group = 0; group < groups.length; group++){
-                    fld = calculateGroup(groups[group], fld);
-                }
-            }
-            console.timeEnd("Calc");
-            setField(fld);
+        console.time("Calculation");
+        const groups = makeGroups();
+        let combsAll = [];
+        for (let group = 0; group < groups.length; group++){
+            const [unopenedCells, borderCells, mines] = groups[group];
+            const combs = findValidBombCombinations(unopenedCells, borderCells, mines);
+            combsAll.push(combs);
         }
-        else if (fullprobs){
-            console.time("Calc");
-            fld = calculateGroup(getData(), fld);
-            console.timeEnd("Calc");
-            setField(fld);
-        }
-    }
-    function calculateGroup(group, fld){
-        const [unopenedCells, borderCells, mines] = group;
-        //console.log(unopenedCells);
-        //console.log(borderCells);
-        const combinations = findValidBombCombinations(unopenedCells, borderCells, mines);
-        console.log(combinations);
+        if (groups.length > 0){
+            const [unopenedCells, borderCells, mines] = getData();
+            const combine = (a, b) => {
+                const result = [];
+                for (const x of a) {
+                    for (const y of b) {
+                        const totalLength = x.reduce((sum, part) => sum + part.length, 0) + y.length;
+                        if (totalLength <= mines) {
+                            result.push(x.concat([y]));
+                        }
+                    }
+                }
+                return result;
+            };
+            let combinations = combsAll.reduce((acc, group) => {
+                return combine(acc, group);
+            }, [[]]).map(combination => combination.flat());
 
-        let fltiles = [];
-        for (let i = 0; i < fld.length; i++) {
-            for (let j = 0; j < fld[0].length; j++){
-                if (fld[i][j] === "C" && GetNumbersCount(i, j, fld) === 0){
-                    fltiles.push([i, j]);
+            console.log(combinations);
+            
+            let fltiles = [];
+            for (let i = 0; i < fld.length; i++) {
+                for (let j = 0; j < fld[0].length; j++){
+                    if (fld[i][j] === "C" && GetNumbersCount(i, j, fld) === 0){
+                        fltiles.push([i, j]);
+                    }
                 }
             }
-        }
-        setFloatingtiles(fltiles);
-        let closedtiles = 0;
-        field.forEach(row => {
-            row.forEach(cell => {
-                if (cell === "C"){
-                    closedtiles++;
-                }
+            setFloatingtiles(fltiles);
+            let closedtiles = 0;
+            field.forEach(row => {
+                row.forEach(cell => {
+                    if (cell === "C"){
+                        closedtiles++;
+                    }
+                });
             });
-        });
-        //console.log(closedtiles);
-        const density = mines / closedtiles;
-        //console.log(density);
-        const mvalue = (1 - density) / density;
-        //console.log(mvalue);
-        let maxcount = 0;
-        combinations.forEach(combo => {
-            if (combo.length > maxcount) maxcount = combo.length;
-        });
-        const floatingtiles = closedtiles - unopenedCells.length;
+            const density = mines / closedtiles;
+            const mvalue = (1 - density) / density;
+            let maxcount = 0;
+            combinations.forEach(combo => {
+                if (combo.length > maxcount) maxcount = combo.length;
+            });
+            const floatingtiles = closedtiles - unopenedCells.length;
 
-        let combs = [];
-        let sumweights = 0;
-        let sumweightsFl = 0;
-        let weightsFl = 0;
-        function C(fl, m){
-            let result = 1;
-            for (let i = 0; i < m; i++){
-                result = result * (fl - i) / (i + 1);
+            let combs = [];
+            let sumweights = 0;
+            let sumweightsFl = 0;
+            let weightsFl = 0;
+            function C(fl, m){
+                let result = 1;
+                for (let i = 0; i < m; i++){
+                    result = result * (fl - i) / (i + 1);
+                }
+                return result;
             }
-            return result;
-        }
-        combinations.forEach(combo => {
-            const weight = 1 * (mvalue**(maxcount-combo.length));
-            sumweights += weight;
-            const flCount = weight * C(floatingtiles, mines - combo.length); 
-            sumweightsFl += flCount;
-            weightsFl += flCount * (mines - combo.length) / floatingtiles;
-            combs.push([[...combo], weight]);
-        });
-        //console.log(combs);
-        if (fullprobs){
+            combinations.forEach(combo => {
+                const weight = 1 * (mvalue**(maxcount-combo.length));
+                sumweights += weight;
+                const flCount = weight * C(floatingtiles, mines - combo.length); 
+                sumweightsFl += flCount;
+                weightsFl += flCount * (mines - combo.length) / floatingtiles;
+                combs.push([[...combo], weight]);
+            });
             const flProb = weightsFl / sumweightsFl;
             fltiles.forEach(tile => {
                 fld[tile[0]][tile[1]] = Math.floor(flProb * 100);
             });
-        }
-        unopenedCells.forEach(cell => {
-            let weights = 0;
-            combs.forEach(combo => {
-                if (combo[0].includes(cell)) {
-                    weights += combo[1];
-                } 
+            unopenedCells.forEach(cell => {
+                let weights = 0;
+                combs.forEach(combo => {
+                    for (let c = 0; c < combo[0].length; c++){
+                        if (combo[0][c][0] === cell[0] && combo[0][c][1] === cell[1]){
+                            weights += combo[1];
+                            break;
+                        }
+                    }
+                });
+                fld[cell[0]][cell[1]] = Math.floor(weights / sumweights * 100);
             });
-            fld[cell[0]][cell[1]] = Math.floor(weights / sumweights * 100);
-        });
-        return fld;
-    }
-    function division(){
-        let flags = 0;
-        for (let row = 0; row < field.length; row++){
-            for (let col = 0; col < field[0].length; col++){
-                if (field[row][col] === "F"){
-                    flags++;
-                }
-            }
+            setField(fld);
         }
-        return [unopened, bordernums, minesleft - flags];
-    }
-    function addCell(row, col, b){
-        if (field[row][col] === "C" && GetNumbersCount(row, col, field) > 0){
-            let uo = [...unopened];
-            if (uo.length === 0){
-                uo.push([row, col]);
-            }
-            else{
-                let includes = false;
-                for (let i = 0; i < uo.length; i++){
-                    if (uo[i][0] === row && uo[i][1] === col){
-                        includes = true;
-                    }
-                }
-                if (!includes){
-                    uo.push([row, col]);
-                }
-            }
-            setUnopened(uo);
-        }
-        else if (field[row][col] !== "C" && field[row][col] !== "F" && GetClosedCount(row, col, field) > 0){
-            let b = [...bordernums];
-            if (b.length === 0){
-                b.push([row, col, Number(field[row][col]) - GetFlagCount(row, col, field)]);
-            }
-            else{
-                let includes = false;
-                for (let i = 0; i < b.length; i++){
-                    if (b[i][0] === row && b[i][1] === col){
-                        includes = true;
-                    }
-                }
-                if (!includes){
-                    b.push([row, col, Number(field[row][col]) - GetFlagCount(row, col, field)]);
-                }
-            }
-            setBordernums(b);
-        }
-    }
-    function newGroup(){
-        if (unopened.length > 0 && bordernums.length > 0){
-            let group = division();
-            let gs = [...groups];
-            gs.push(group);
-            setGroups(gs);
-            setUnopened([]);
-            setBordernums([]);
-        }
+        console.timeEnd("Calculation");
     }
     function getData(){
         let unopened = [];
@@ -626,16 +432,6 @@ export default function FilePaste(){
         }
         return [unopened, borders, minesleft - flags];
     }
-    function setSize(){
-        if (width >= 5 && height >= 5 && width <= 100 && height <= 100){
-            setField(Array.from({ length: height }, () =>
-                Array.from({ length: width }, () => null)
-            ));
-        }
-        if (minesleft > width * height){
-            setMinesleft(String(width * height));
-        }
-    }
     return (
         <div className="filePaste">
             <div className="pasteItems">
@@ -643,18 +439,12 @@ export default function FilePaste(){
                 <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>
             </div>
             <div className="fieldItems">
-                <button type="button" onClick={calc}>Probs</button>
+                <button type="button" onClick={calculation}>Probs</button>
                 <input style={{width: "50px"}} value={width} type="text" onChange={(e) => setWidth(e.target.value)}/>
                 <input style={{width: "50px"}} value={height} type="text" onChange={(e) => setHeight(e.target.value)} />
                 <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)} />
-                <button type="button" onClick={setSize}>⟲</button>
             </div>
-            <div className="probsItems">
-                <input className="form-check-input" type="checkbox" id="probsCheckBox" checked={fullprobs} onChange={() => setFullProbs(!fullprobs)}/>
-                <label className="form-check-label" htmlFor="probsCheckBox">Full Probs</label>
-                <button type="button" onClick={newGroup}>+</button>
-            </div>
-            <Grid field={field} id={3} OnCell={addCell} mine={null} marking={[unopened, bordernums]} fl={floatingtiles} />
+            <Grid field={field} fl={floatingtiles} />
         </div>
     );
 }

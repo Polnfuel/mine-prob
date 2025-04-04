@@ -1,11 +1,6 @@
 .grid {
     display: grid;
     user-select: none;
-}
-#field2 {
-    margin-top: 20px;
-}
-#field3 {
     margin: 20px;
 }
 .cell {
