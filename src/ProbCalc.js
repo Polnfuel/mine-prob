@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import "./FilePaste.css";
+import "./ProbCalc.css";
 import Grid from "./Grid";
 
 function get2dArray(data, width) {
@@ -208,7 +208,7 @@ function getClosedCount(cell, dfield, width){
     return count;
 }
 
-export default function FilePaste(){
+export default function ProbCalc(){
     const [height, setHeight] = useState("16");
     const [width, setWidth] = useState("30");
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
@@ -222,7 +222,7 @@ export default function FilePaste(){
     
         try {
             const response = await fetch(imageUrl, { mode: "cors" });
-            if (!response.ok) throw new Error("Не удалось загрузить изображение");
+            if (!response.ok) throw new Error("Couldn't upload image");
     
             const blob = await response.blob();
             if (!blob.type.startsWith("image/")) {
@@ -421,15 +421,13 @@ export default function FilePaste(){
     function findCombs(unopenedCells, borderCells, minesLeft, width, height, globalUo) {
         const combinations = [];
     
-        // Отображение: локальный индекс -> глобальный индекс
         const localToGlobalBit = new Uint8Array(unopenedCells.length);
-        const cellToBit = new Map(); // cellIndex -> local bit
+        const cellToBit = new Map();
         unopenedCells.forEach((cell, i) => {
             localToGlobalBit[i] = globalUo.indexOf(cell);
             cellToBit.set(cell, i);
         });
     
-        // Строим информацию по граничным клеткам
         const borderInfo = borderCells.map(([index, number]) => {
             const neighbors = getNei(index, width, height);
             let mask = 0;
@@ -442,7 +440,6 @@ export default function FilePaste(){
             return { mask, number };
         });
     
-        // Быстрая функция подсчета битов (по желанию можно кэшировать)
         const popCountCache = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
             popCountCache[i] = (i & 1) + popCountCache[i >> 1];
@@ -476,10 +473,8 @@ export default function FilePaste(){
                 return;
             }
     
-            // С текущей клеткой как миной
             backtrack(index + 1, currentMask | (1 << index), used + 1);
     
-            // Без мины
             backtrack(index + 1, currentMask, used);
         }
 
@@ -488,7 +483,6 @@ export default function FilePaste(){
     function genCombs(maskGroups, maxMines, localsAll) {
         const result = new Map();
 
-        // Предварительно переводим все локальные маски в глобальные BigInt
         const cachedGroups = maskGroups.map((group, i) => {
             const localToGlobal = localsAll[i];
             return group.map(localMask => {
@@ -504,7 +498,6 @@ export default function FilePaste(){
             });
         });
     
-        // Перебираем все сочетания без пересечений
         function backtrack(index, currentMask, usedMines) {
             if (usedMines > maxMines) return;
     
@@ -514,8 +507,6 @@ export default function FilePaste(){
             }
     
             for (const { mask, count } of cachedGroups[index]) {
-                // if ((currentMask & mask) !== 0n) continue; // пересечение — пропускаем
-    
                 backtrack(index + 1, currentMask | mask, usedMines + count);
             }
         }
@@ -524,7 +515,7 @@ export default function FilePaste(){
         return result;
     }
     return (
-        <div className="filePaste">
+        <div className="probCalc">
             <div className="pasteItems">
                 <button type="button" onClick={urlPaste}>Paste</button>
                 <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>

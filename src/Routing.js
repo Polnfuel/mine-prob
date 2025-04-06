@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
-import FilePaste from "./FilePaste";
+import ProbCalc from "./ProbCalc";
 
 export default function Routing() {
     return (
@@ -15,7 +15,7 @@ export default function Routing() {
                 </div>
                 <div className="flex-grow-1 p-3">
                   <Routes>
-                    <Route path="/minesweeper" element={<FilePaste />} />
+                    <Route path="/minesweeper" element={<ProbCalc />} />
                     <Route path="*" element={<div>404: Page Not Found</div>} />
                   </Routes>
                 </div>
