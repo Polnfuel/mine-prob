@@ -20,6 +20,13 @@
     "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es2020": true
+    },
+    "parserOptions": {
+      "ecmaVersion": "latest"
+    },
     "extends": [
       "react-app",
       "react-app/jest"
