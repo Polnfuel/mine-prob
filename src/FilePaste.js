@@ -60,19 +60,6 @@ function getUserField(array, width, height){
     }
     return userfield;
 }
-function getNeighbors(cell, field){
-    let mas = [];
-    let neis = [];
-    const x = cell[0];
-    const y = cell[1];
-    mas = [[x-1, y-1], [x, y-1], [x+1, y-1], [x-1, y], [x+1, y], [x-1, y+1], [x, y+1], [x+1, y+1]];
-    mas.forEach(coord => {
-        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
-            neis.push(coord);
-        }
-    });
-    return neis;
-}
 const loadImage = (src) => {
     return new Promise((resolve, reject) => {
       const img = new Image();
@@ -137,86 +124,6 @@ function oneDarrayToCellArray(darray, width){
         arr[cell] = [row, col];
     }
     return arr;
-}
-function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesleft) {
-    const combinations = [];
-
-    function isCombinationValid(bombCombination) {
-        for (const [x, y, number] of borderCellsWithNumbers) {
-            let bombCount = 0;
-            for (const [bx, by] of bombCombination) {
-                if (
-                    (bx >= x - 1 && bx <= x + 1) &&
-                    (by >= y - 1 && by <= y + 1)
-                ) {
-                    bombCount++;
-                }
-            }
-            if (bombCount !== number) return false;
-        }
-        return true;
-    }
-
-    function backtrack(index, currentCombination, remainingMines) {
-        if (currentCombination.length > minesleft) return; 
-        
-        if (index === unopenedCells.length) {
-            if (isCombinationValid(currentCombination)) {
-                combinations.push([...currentCombination]);
-            }
-            return;
-        }
-
-        if (remainingMines > 0) {
-            currentCombination.push(unopenedCells[index]);
-            backtrack(index + 1, currentCombination, remainingMines - 1);
-            currentCombination.pop();
-        }
-        
-        backtrack(index + 1, currentCombination, remainingMines);
-    }
-
-    backtrack(0, [], minesleft);
-    return combinations;
-}
-function GetFlagCount(i, j, field){
-    let count = 0;
-    let mas = [];
-    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
-    mas.forEach(coord => {
-        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
-            if (field[coord[0]][coord[1]] === "F"){
-                count++;
-            }
-        }
-    });
-    return count;
-}
-function GetNumbersCount(i, j, field){
-    let count = 0;
-    let mas = [];
-    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
-    mas.forEach(coord => {
-        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
-            if (field[coord[0]][coord[1]] !== "F" && field[coord[0]][coord[1]] !== "C"){
-                count++;
-            }
-        }
-    });
-    return count;
-}
-function GetClosedCount(i, j, field){
-    let count = 0;
-    let mas = [];
-    mas = [[i-1, j-1], [i, j-1], [i+1, j-1], [i-1, j], [i+1, j], [i-1, j+1], [i, j+1], [i+1, j+1]];
-    mas.forEach(coord => {
-        if (coord[0] >= 0 && coord[1] >= 0 && coord[0] < field.length && coord[1] < field[0].length){
-            if (field[coord[0]][coord[1]] === "C"){
-                count++;
-            }
-        }
-    });
-    return count;
 }
 function getNei(cell, width, height){
     let mas;
@@ -308,7 +215,6 @@ export default function FilePaste(){
     const [dfield, setDField] = useState(Array.from({length: 30 * 16}, () => null));
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
-    const [groups, setGroups] = useState([]);
     const [floatingtiles, setFloatingtiles] = useState([]);
 
     const urlPaste = async () => {
@@ -331,14 +237,13 @@ export default function FilePaste(){
             setWidth(w);
             setHeight(h);
             setImageUrl("");
-            setGroups([]);
         } catch (error) {
             console.error(error);
         }
     };
     function make1dGroup(uo, bc, uochecked, bcchecked){
         for (let u = uochecked; u < uo.length; u++){
-            let neis = getNei(uo[u], Number(width), Number(height));
+            let neis = getNei(uo[u], width, height);
             neis.forEach(nei => {
                 if (Number(dfield[nei]) > 0){
                     if (!bc.includes(nei)){
@@ -349,7 +254,7 @@ export default function FilePaste(){
             uochecked += 1;
         }
         for (let b = bcchecked; b < bc.length; b++){
-            let neis = getNei(bc[b], Number(width), Number(height));
+            let neis = getNei(bc[b], width, height);
             neis.forEach(nei => {
                 if (dfield[nei] === "C"){
                     if (!uo.includes(nei)){
@@ -369,55 +274,10 @@ export default function FilePaste(){
             }
         }
     }
-    function makeGroup(uo, bc, uochecked, bcchecked){
-        for (let u = uochecked; u < uo.length; u++){
-            let neis = getNeighbors(uo[u], field);
-            neis.forEach(nei => {
-                if (Number(field[nei[0]][nei[1]]) > 0){
-                    let contains = false;
-                    for (let b = 0; b < bc.length; b++){
-                        if (nei[0] === bc[b][0] && nei[1] === bc[b][1]){
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (!contains){
-                        bc.push(nei);
-                    }
-                }
-            });
-            uochecked += 1;
-        }
-        for (let b = bcchecked; b < bc.length; b++){
-            let neis = getNeighbors(bc[b], field);
-            neis.forEach(nei => {
-                if (field[nei[0]][nei[1]] === "C"){
-                    let contains = false;
-                    for (let u = 0; u < uo.length; u++){
-                        if (nei[0] === uo[u][0] && nei[1] === uo[u][1]){
-                            contains = true;
-                            break;
-                        }
-                    }
-                    if (!contains){
-                        uo.push(nei);
-                    }
-                }
-            });
-            bcchecked += 1;
-        }
-        if (bcchecked === bc.length && uochecked === uo.length){
-            return [uo, bc, uochecked, bcchecked];
-        }
-        else{
-            [uo, bc, uochecked, bcchecked] = makeGroup(uo, bc, uochecked, bcchecked);
-            if (bcchecked === bc.length && uochecked === uo.length){
-                return [uo, bc, uochecked, bcchecked];
-            }
-        }
-    }
     function make1dGroups(){
         const [unopenedCells, borderCells, mines] = get1dData();
+        if (unopenedCells.length === 0)
+            throw new Error();
         let gs = [];
         let uogroupsLength = 0;
         while (uogroupsLength < unopenedCells.length){
@@ -464,70 +324,23 @@ export default function FilePaste(){
         }
         return gs;
     }
-    function makeGroups(){
-        const [unopenedCells, borderCells, mines] = getData();
-        let gs = [];
-        let uogroupsLength = 0;
-        while(uogroupsLength < unopenedCells.length) {
-            let uoStart;
-            if (gs.length !== 0) {
-                let quit;
-                for (let uoc = 0; uoc < unopenedCells.length; uoc++){
-                    quit = false;
-                    for (let g = 0; g < gs.length; g++){
-                        for (let uog = 0; uog < gs[g][0].length; uog++){
-                            if (gs[g][0][uog][0] === unopenedCells[uoc][0] && gs[g][0][uog][1] === unopenedCells[uoc][1]){
-                                quit = true;
-                                break;
-                            }
-                        }
-                        if (quit){
-                            break;
-                        }
-                    }
-                    if (!quit) {
-                        uoStart = unopenedCells[uoc];
-                        break;
-                    }
-                }
-            }
-            else {
-                uoStart = unopenedCells[0];
-            }
-            let uo = [uoStart];
-            let bc = [];
-            let uochecked = 0;
-            let bcchecked = 0;
-            let [uogroup, bcgroup] = makeGroup(uo, bc, uochecked, bcchecked);
-            for (let bc = 0; bc < bcgroup.length; bc++){
-                for (let border = 0; border < borderCells.length; border++){
-                    if (bcgroup[bc][0] === borderCells[border][0] && bcgroup[bc][1] === borderCells[border][1]){
-                        bcgroup[bc].push(borderCells[border][2]);
-                        break;
-                    }
-                }
-            }
-            uogroupsLength += uogroup.length;
-            gs.push([uogroup, bcgroup, mines]);
-        }
-        setGroups(gs);
-        return gs;
-    }
     function calc1d(){
         let fld = [...dfield];
         console.time("1d");
-        const groups = make1dGroups();
+        let groups;
+        try {
+            groups = make1dGroups();
+        }
+        catch{ console.timeEnd("1d"); return; }
         let combsAll = [];
         let localsAll = [];
         const [unopened, border, mines] = get1dData();
-        console.time("combs");
         for (let group = 0; group < groups.length; group++){
             let [unopenedCells, borderCells, mines] = groups[group];
-            const [combs, localToGlobal] = fff(unopenedCells, borderCells, mines, Number(width), Number(height), unopened);
+            const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, mines, width, height, unopened);
             combsAll.push(combs);
             localsAll.push(localToGlobal);
         }
-        console.timeEnd("combs");
         if (groups.length > 0) {
             let combinations = genCombs(combsAll, mines, localsAll);
             let fltiles = [];
@@ -535,7 +348,7 @@ export default function FilePaste(){
             for (let cell = 0; cell < dfield.length; cell++){
                 if (dfield[cell] === "C"){
                     closedtiles++;
-                    if (getNumCount(cell, dfield, Number(width)) === 0){
+                    if (getNumCount(cell, dfield, width) === 0){
                         fltiles.push(cell);
                     }
                 }
@@ -582,136 +395,22 @@ export default function FilePaste(){
                 fld[unopened[uo]] = Math.floor(weights / sumweights * 100);
             }
             setDField(fld);
-            let fi = oneDtoFld(fld, Number(width));
+            let fi = oneDtoFld(fld, width);
             console.timeEnd("1d");
             setField(fi);
-            setFloatingtiles(oneDarrayToCellArray(fltiles, Number(width)));
+            setFloatingtiles(oneDarrayToCellArray(fltiles, width));
         }
-    }
-    function calculation(){
-        let fld = field.map(row => [...row]);
-        console.time("Calculation");
-        const groups = makeGroups();
-        let combsAll = [];
-        console.time("combos");
-        for (let group = 0; group < groups.length; group++){
-            const [unopenedCells, borderCells, mines] = groups[group];
-            const combs = findValidBombCombinations(unopenedCells, borderCells, mines);
-            combsAll.push(combs);
-        }
-        console.timeEnd("combos");
-        if (groups.length > 0){
-            const [unopenedCells, borderCells, mines] = getData();
-            const combine = (a, b) => {
-                const result = [];
-                for (const x of a) {
-                    for (const y of b) {
-                        const totalLength = x.reduce((sum, part) => sum + part.length, 0) + y.length;
-                        if (totalLength <= mines) {
-                            result.push(x.concat([y]));
-                        }
-                    }
-                }
-                return result;
-            };
-            let combinations = combsAll.reduce((acc, group) => {
-                return combine(acc, group);
-            }, [[]]).map(combination => combination.flat());
-
-            
-            let fltiles = [];
-            for (let i = 0; i < fld.length; i++) {
-                for (let j = 0; j < fld[0].length; j++){
-                    if (fld[i][j] === "C" && GetNumbersCount(i, j, fld) === 0){
-                        fltiles.push([i, j]);
-                    }
-                }
-            }
-            setFloatingtiles(fltiles);
-            let closedtiles = 0;
-            field.forEach(row => {
-                row.forEach(cell => {
-                    if (cell === "C"){
-                        closedtiles++;
-                    }
-                });
-            });
-            const density = mines / closedtiles;
-            const mvalue = (1 - density) / density;
-            let maxcount = 0;
-            combinations.forEach(combo => {
-                if (combo.length > maxcount) maxcount = combo.length;
-            });
-            const floatingtiles = closedtiles - unopenedCells.length;
-
-            let combs = [];
-            let sumweights = 0;
-            let sumweightsFl = 0;
-            let weightsFl = 0;
-            function C(fl, m){
-                let result = 1;
-                for (let i = 0; i < m; i++){
-                    result = result * (fl - i) / (i + 1);
-                }
-                return result;
-            }
-            combinations.forEach(combo => {
-                const weight = 1 * (mvalue**(maxcount-combo.length));
-                sumweights += weight;
-                const flCount = weight * C(floatingtiles, mines - combo.length); 
-                sumweightsFl += flCount;
-                weightsFl += flCount * (mines - combo.length) / floatingtiles;
-                combs.push([[...combo], weight]);
-            });
-            const flProb = weightsFl / sumweightsFl;
-            fltiles.forEach(tile => {
-                fld[tile[0]][tile[1]] = Math.floor(flProb * 100);
-            });
-            unopenedCells.forEach(cell => {
-                let weights = 0;
-                combs.forEach(combo => {
-                    for (let c = 0; c < combo[0].length; c++){
-                        if (combo[0][c][0] === cell[0] && combo[0][c][1] === cell[1]){
-                            weights += combo[1];
-                            break;
-                        }
-                    }
-                });
-                fld[cell[0]][cell[1]] = Math.floor(weights / sumweights * 100);
-            });
-            setField(fld);
-        }
-        console.timeEnd("Calculation");
-    }
-    function getData(){
-        let unopened = [];
-        let borders = [];
-        let flags = 0;
-        for (let row = 0; row < field.length; row++){
-            for (let col = 0; col < field[0].length; col++){
-                if (field[row][col] === "C" && GetNumbersCount(row, col, field) > 0){
-                    unopened.push([row, col]);
-                }
-                if (field[row][col] !== "C" && field[row][col] !== "F" && GetClosedCount(row, col, field) > 0){
-                    borders.push([row, col, Number(field[row][col])  - GetFlagCount(row, col, field)])
-                }
-                if (field[row][col] === "F"){
-                    flags++;
-                }
-            }
-        }
-        return [unopened, borders, minesleft - flags];
     }
     function get1dData() {
         let unopened = [];
         let borders = [];
         let flags = 0;
         for (let cell = 0; cell < dfield.length; cell++){
-            if (dfield[cell] === "C" && getNumCount(cell, dfield, Number(width)) > 0){
+            if (dfield[cell] === "C" && getNumCount(cell, dfield, width) > 0){
                 unopened.push(cell);
             }
-            else if (dfield[cell] !== "C" && dfield[cell] !== "F" && getClosedCount(cell, dfield, Number(width)) > 0){
-                borders.push([cell, Number(dfield[cell] - getFlagCount(cell, dfield, Number(width)))]);
+            else if (dfield[cell] !== "C" && dfield[cell] !== "F" && getClosedCount(cell, dfield, width) > 0){
+                borders.push([cell, Number(dfield[cell] - getFlagCount(cell, dfield, width))]);
             }
             else if (dfield[cell] === "F"){
                 flags++;
@@ -719,7 +418,7 @@ export default function FilePaste(){
         }
         return [unopened, borders, minesleft - flags];
     }
-    function fff(unopenedCells, borderCells, minesLeft, width, height, globalUo) {
+    function findCombs(unopenedCells, borderCells, minesLeft, width, height, globalUo) {
         const combinations = [];
     
         // Отображение: локальный индекс -> глобальный индекс
@@ -831,8 +530,7 @@ export default function FilePaste(){
                 <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>
             </div>
             <div className="fieldItems">
-                <button type="button" onClick={calculation}>Probs</button>
-                <button type="button" onClick={calc1d}>Calc</button>
+                <button type="button" onClick={calc1d}>Probs</button>
                 <input style={{width: "50px"}} value={width} type="text" onChange={(e) => setWidth(e.target.value)}/>
                 <input style={{width: "50px"}} value={height} type="text" onChange={(e) => setHeight(e.target.value)} />
                 <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)} />
