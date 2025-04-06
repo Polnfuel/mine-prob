@@ -110,6 +110,34 @@ async function processImage(image) {
     return [userfield, width, height];
 }
 
+function fldto1d(field){
+    let fld = [];
+    for (let i = 0; i < field.length; i++){
+        for (let j = 0; j < field[0].length; j++){
+            fld.push(field[i][j]);
+        }
+    }
+    return fld;
+}
+function oneDtoFld(dfield, width){
+    const height = dfield.length / width
+    let fld = Array.from({length: height}, () => Array.from({length: width}, () => null));
+    for (let cell = 0; cell < dfield.length; cell++) {
+        const row = Math.floor(cell / width);
+        const col = cell % width;
+        fld[row][col] = dfield[cell];
+    }
+    return fld;
+}
+function oneDarrayToCellArray(darray, width){
+    let arr = Array.from({length: darray.length}, () => null);
+    for (let cell = 0; cell < darray.length; cell++){
+        const row = Math.floor(darray[cell] / width);
+        const col = darray[cell] % width;
+        arr[cell] = [row, col];
+    }
+    return arr;
+}
 function findValidBombCombinations(unopenedCells, borderCellsWithNumbers, minesleft) {
     const combinations = [];
 
@@ -190,11 +218,94 @@ function GetClosedCount(i, j, field){
     });
     return count;
 }
+function getNei(cell, width, height){
+    let mas;
+    if (Math.floor(cell / width) === 0)
+    {
+        if (cell === 0)
+        {
+            mas = [1, width, width + 1];
+        }
+        else if (cell === width - 1)
+        {
+            mas = [cell - 1, cell - 1 + width, cell + width];
+        }
+        else
+        {
+            mas = [cell - 1, cell + 1, cell - 1 + width, cell + width, cell + 1 + width];
+        }
+    }
+    else if (Math.floor(cell / width) === height - 1)
+    {
+        if (cell === (height - 1) * width)
+        {
+            mas = [cell - width, cell - width + 1, cell + 1];
+        }
+        else if (cell === height * width - 1)
+        {
+            mas = [cell - 1, cell - width - 1, cell - width];
+        }
+        else
+        {
+            mas = [cell - 1, cell + 1, cell - width + 1, cell - width - 1, cell - width];
+        }
+    }
+    else
+    {
+        if (cell % width === 0)
+        {
+            mas = [cell - width, cell - width + 1, cell + 1, cell + width, cell + width + 1];
+        }
+        else if (cell % width === width - 1)
+        {
+            mas = [cell - width - 1, cell - width, cell - 1, cell + width - 1, cell + width];
+        }
+        else
+        {
+            mas = [cell - width - 1, cell - width, cell - width + 1, cell - 1, cell + 1, cell + width - 1, cell + width, cell + width + 1];
+        }
+    }
+    return mas;
+}
+function getNumCount(cell, dfield, width){
+    let count = 0;
+    const height = dfield.length / width;
+    let mas = [];
+    mas = getNei(cell, width, height);
+    mas.forEach(nei => {
+        if (dfield[nei] !== "F" && dfield[nei] !== "C")
+            count++;
+    });
+    return count;
+}
+function getFlagCount(cell, dfield, width){
+    let count = 0;
+    const height = dfield.length / width;
+    let mas = [];
+    mas = getNei(cell, width, height);
+    mas.forEach(nei => {
+        if (dfield[nei] === "F")
+            count++;
+    });
+    return count;
+}
+function getClosedCount(cell, dfield, width){
+    let count = 0;
+    const height = dfield.length / width;
+    let mas = [];
+    mas = getNei(cell, width, height);
+    mas.forEach(nei => {
+        if (dfield[nei] === "C")
+            count++;
+    });
+    return count;
+}
 
 export default function FilePaste(){
     const [height, setHeight] = useState("16");
     const [width, setWidth] = useState("30");
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
+    const [dfield, setDField] = useState(Array.from({length: 30 * 16}, () => null));
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
     const [groups, setGroups] = useState([]);
@@ -214,7 +325,9 @@ export default function FilePaste(){
     
             const imageData = await readFile(blob);
             const [userfield, w, h] = await processImage(imageData);
+            const duserfield = fldto1d(userfield);
             setField(userfield);
+            setDField(duserfield);
             setWidth(w);
             setHeight(h);
             setImageUrl("");
@@ -223,6 +336,39 @@ export default function FilePaste(){
             console.error(error);
         }
     };
+    function make1dGroup(uo, bc, uochecked, bcchecked){
+        for (let u = uochecked; u < uo.length; u++){
+            let neis = getNei(uo[u], Number(width), Number(height));
+            neis.forEach(nei => {
+                if (Number(dfield[nei]) > 0){
+                    if (!bc.includes(nei)){
+                        bc.push(nei);
+                    }
+                }
+            });
+            uochecked += 1;
+        }
+        for (let b = bcchecked; b < bc.length; b++){
+            let neis = getNei(bc[b], Number(width), Number(height));
+            neis.forEach(nei => {
+                if (dfield[nei] === "C"){
+                    if (!uo.includes(nei)){
+                        uo.push(nei);
+                    }
+                }
+            });
+            bcchecked += 1;
+        }
+        if (bcchecked === bc.length && uochecked === uo.length){
+            return [uo, bc, uochecked, bcchecked];
+        }
+        else {
+            [uo, bc, uochecked, bcchecked] = make1dGroup(uo, bc, uochecked, bcchecked);
+            if (bcchecked === bc.length && uochecked === uo.length){
+                return [uo, bc, uochecked, bcchecked];
+            }
+        }
+    }
     function makeGroup(uo, bc, uochecked, bcchecked){
         for (let u = uochecked; u < uo.length; u++){
             let neis = getNeighbors(uo[u], field);
@@ -269,6 +415,54 @@ export default function FilePaste(){
                 return [uo, bc, uochecked, bcchecked];
             }
         }
+    }
+    function make1dGroups(){
+        const [unopenedCells, borderCells, mines] = get1dData();
+        let gs = [];
+        let uogroupsLength = 0;
+        while (uogroupsLength < unopenedCells.length){
+            let uoStart;
+            if (gs.length !== 0){
+                let quit;
+                for (let uoc = 0; uoc < unopenedCells.length; uoc++){
+                    quit = false;
+                    for (let g = 0; g < gs.length; g++){
+                        for (let uog = 0; uog < gs[g][0].length; uog++){
+                            if (gs[g][0][uog] === unopenedCells[uoc]){
+                                quit = true;
+                                break;
+                            }
+                        }
+                        if (quit){
+                            break;
+                        }
+                    }
+                    if (!quit){
+                        uoStart = unopenedCells[uoc];
+                        break;
+                    }
+                }
+            }
+            else {
+                uoStart = unopenedCells[0];
+            }
+            let uo = [uoStart];
+            let bc = [];
+            let uochecked = 0;
+            let bcchecked = 0;
+            let [uogroup, bcgroup] = make1dGroup(uo, bc, uochecked, bcchecked);
+            for (let bc = 0; bc < bcgroup.length; bc++){
+                for (let border = 0; border < borderCells.length; border++){
+                    if (bcgroup[bc] === borderCells[border][0]){
+                        bcgroup[bc] = [bcgroup[bc], borderCells[border][1]];
+                        break;
+                    }
+                }
+            }
+            uogroupsLength += uogroup.length;
+            gs.push([uogroup.sort((a, b) => a - b), bcgroup, mines]);
+        }
+        return gs;
     }
     function makeGroups(){
         const [unopenedCells, borderCells, mines] = getData();
@@ -319,16 +513,93 @@ export default function FilePaste(){
         setGroups(gs);
         return gs;
     }
+    function calc1d(){
+        let fld = [...dfield];
+        console.time("1d");
+        const groups = make1dGroups();
+        let combsAll = [];
+        let localsAll = [];
+        const [unopened, border, mines] = get1dData();
+        console.time("combs");
+        for (let group = 0; group < groups.length; group++){
+            let [unopenedCells, borderCells, mines] = groups[group];
+            const [combs, localToGlobal] = fff(unopenedCells, borderCells, mines, Number(width), Number(height), unopened);
+            combsAll.push(combs);
+            localsAll.push(localToGlobal);
+        }
+        console.timeEnd("combs");
+        if (groups.length > 0) {
+            let combinations = genCombs(combsAll, mines, localsAll);
+            let fltiles = [];
+            let closedtiles = 0;
+            for (let cell = 0; cell < dfield.length; cell++){
+                if (dfield[cell] === "C"){
+                    closedtiles++;
+                    if (getNumCount(cell, dfield, Number(width)) === 0){
+                        fltiles.push(cell);
+                    }
+                }
+            }
+
+            const density = mines / closedtiles;
+            const mvalue = (1 - density) / density;
+            let maxcount = 0;
+            combinations.values().forEach(len => {
+                if (len > maxcount) maxcount = len;
+            });
+            const floatingtiles = closedtiles - unopened.length;
+
+            let combs = new Map();
+            let sumweights = 0;
+            let sumweightsFl = 0;
+            let weightsFl = 0;
+            function C(fl, m){
+                let result = 1;
+                for (let i = 0; i < m; i++){
+                    result = result * (fl - i) / (i + 1);
+                }
+                return result;
+            }
+            for (const entry of combinations) {
+                const weight = 1 * (mvalue**(maxcount-entry[1]));
+                sumweights += weight;
+                const flCount = weight * C(floatingtiles, mines - entry[1]);
+                sumweightsFl += flCount;
+                weightsFl += flCount * (mines - entry[1]) / floatingtiles;
+                combs.set(entry[0], [entry[1], weight]);
+            }
+            const flProb = weightsFl / sumweightsFl;
+            fltiles.forEach(tile => {
+                fld[tile] = Math.floor(flProb * 100);
+            });
+            for (let uo = 0; uo < unopened.length; uo++) {
+                let weights = 0;
+                for (const combo of combs) {
+                    if ((combo[0] >> BigInt(uo)) & 1n) {
+                        weights += combo[1][1];
+                    }
+                }
+                fld[unopened[uo]] = Math.floor(weights / sumweights * 100);
+            }
+            setDField(fld);
+            let fi = oneDtoFld(fld, Number(width));
+            console.timeEnd("1d");
+            setField(fi);
+            setFloatingtiles(oneDarrayToCellArray(fltiles, Number(width)));
+        }
+    }
     function calculation(){
         let fld = field.map(row => [...row]);
         console.time("Calculation");
         const groups = makeGroups();
         let combsAll = [];
+        console.time("combos");
         for (let group = 0; group < groups.length; group++){
             const [unopenedCells, borderCells, mines] = groups[group];
             const combs = findValidBombCombinations(unopenedCells, borderCells, mines);
             combsAll.push(combs);
         }
+        console.timeEnd("combos");
         if (groups.length > 0){
             const [unopenedCells, borderCells, mines] = getData();
             const combine = (a, b) => {
@@ -347,7 +618,6 @@ export default function FilePaste(){
                 return combine(acc, group);
             }, [[]]).map(combination => combination.flat());
 
-            console.log(combinations);
             
             let fltiles = [];
             for (let i = 0; i < fld.length; i++) {
@@ -432,6 +702,128 @@ export default function FilePaste(){
         }
         return [unopened, borders, minesleft - flags];
     }
+    function get1dData() {
+        let unopened = [];
+        let borders = [];
+        let flags = 0;
+        for (let cell = 0; cell < dfield.length; cell++){
+            if (dfield[cell] === "C" && getNumCount(cell, dfield, Number(width)) > 0){
+                unopened.push(cell);
+            }
+            else if (dfield[cell] !== "C" && dfield[cell] !== "F" && getClosedCount(cell, dfield, Number(width)) > 0){
+                borders.push([cell, Number(dfield[cell] - getFlagCount(cell, dfield, Number(width)))]);
+            }
+            else if (dfield[cell] === "F"){
+                flags++;
+            }
+        }
+        return [unopened, borders, minesleft - flags];
+    }
+    function fff(unopenedCells, borderCells, minesLeft, width, height, globalUo) {
+        const combinations = [];
+    
+        // Отображение: локальный индекс -> глобальный индекс
+        const localToGlobalBit = new Uint8Array(unopenedCells.length);
+        const cellToBit = new Map(); // cellIndex -> local bit
+        unopenedCells.forEach((cell, i) => {
+            localToGlobalBit[i] = globalUo.indexOf(cell);
+            cellToBit.set(cell, i);
+        });
+    
+        // Строим информацию по граничным клеткам
+        const borderInfo = borderCells.map(([index, number]) => {
+            const neighbors = getNei(index, width, height);
+            let mask = 0;
+            for (const nei of neighbors) {
+                const bit = cellToBit.get(nei);
+                if (bit !== undefined) {
+                    mask |= 1 << bit;
+                }
+            }
+            return { mask, number };
+        });
+    
+        // Быстрая функция подсчета битов (по желанию можно кэшировать)
+        const popCountCache = new Uint8Array(256);
+        for (let i = 0; i < 256; i++) {
+            popCountCache[i] = (i & 1) + popCountCache[i >> 1];
+        }
+
+        backtrack(0, 0, 0);
+    
+        function countBits(n) {
+            return (
+                popCountCache[n & 255] +
+                popCountCache[(n >> 8) & 255] +
+                popCountCache[(n >> 16) & 255] +
+                popCountCache[(n >> 24) & 255]
+            );
+        }
+    
+        function isValid(mask) {
+            for (const { mask: m, number } of borderInfo) {
+                const overlap = mask & m;
+                if (countBits(overlap) !== number) return false;
+            }
+            return true;
+        }
+    
+        function backtrack(index, currentMask, used) {
+            if (used > minesLeft) return;
+            if (index === unopenedCells.length) {
+                if (isValid(currentMask)) {
+                    combinations.push(currentMask);
+                }
+                return;
+            }
+    
+            // С текущей клеткой как миной
+            backtrack(index + 1, currentMask | (1 << index), used + 1);
+    
+            // Без мины
+            backtrack(index + 1, currentMask, used);
+        }
+
+        return [combinations, localToGlobalBit];
+    }
+    function genCombs(maskGroups, maxMines, localsAll) {
+        const result = new Map();
+
+        // Предварительно переводим все локальные маски в глобальные BigInt
+        const cachedGroups = maskGroups.map((group, i) => {
+            const localToGlobal = localsAll[i];
+            return group.map(localMask => {
+                let globalMask = 0n;
+                let count = 0;
+                for (let j = 0; j < localToGlobal.length; j++) {
+                    if ((localMask >> j) & 1) {
+                        globalMask |= 1n << BigInt(localToGlobal[j]);
+                        count++;
+                    }
+                }
+                return { mask: globalMask, count };
+            });
+        });
+    
+        // Перебираем все сочетания без пересечений
+        function backtrack(index, currentMask, usedMines) {
+            if (usedMines > maxMines) return;
+    
+            if (index === cachedGroups.length) {
+                result.set(currentMask, usedMines);
+                return;
+            }
+    
+            for (const { mask, count } of cachedGroups[index]) {
+                // if ((currentMask & mask) !== 0n) continue; // пересечение — пропускаем
+    
+                backtrack(index + 1, currentMask | mask, usedMines + count);
+            }
+        }
+    
+        backtrack(0, 0n, 0);
+        return result;
+    }
     return (
         <div className="filePaste">
             <div className="pasteItems">
@@ -440,6 +832,7 @@ export default function FilePaste(){
             </div>
             <div className="fieldItems">
                 <button type="button" onClick={calculation}>Probs</button>
+                <button type="button" onClick={calc1d}>Calc</button>
                 <input style={{width: "50px"}} value={width} type="text" onChange={(e) => setWidth(e.target.value)}/>
                 <input style={{width: "50px"}} value={height} type="text" onChange={(e) => setHeight(e.target.value)} />
                 <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)} />
