@@ -423,8 +423,10 @@ export default function ProbCalc(){
             localToGlobalBit[i] = globalUo.indexOf(cell);
             cellToBit.set(cell, i);
         });
-    
+
+        let min = 0;
         const borderInfo = borderCells.map(([index, number]) => {
+            if (number > min) min = number;
             const neighbors = getNei(index, width, height);
             let mask = 0;
             for (const nei of neighbors) {
@@ -441,8 +443,6 @@ export default function ProbCalc(){
             popCountCache[i] = (i & 1) + popCountCache[i >> 1];
         }
 
-        backtrack(0, 0, 0);
-    
         function countBits(n) {
             return (
                 popCountCache[n & 255] +
@@ -460,18 +460,14 @@ export default function ProbCalc(){
             return true;
         }
     
-        function backtrack(index, currentMask, used) {
-            if (used > mines) return;
-            if (index === unopenedCells.length) {
-                if (isValid(currentMask)) {
-                    combinations.push(currentMask);
-                }
-                return;
+        const limit = 1 << unopenedCells.length;
+        for (let mask = 0; mask < limit; mask++){
+            const bits = countBits(mask);
+            if (bits > mines || bits < min) continue;
+            if (isValid(mask)){
+                combinations.push(mask);
+                continue;
             }
-    
-            backtrack(index + 1, currentMask | (1 << index), used + 1);
-    
-            backtrack(index + 1, currentMask, used);
         }
 
         return [combinations, localToGlobalBit];
