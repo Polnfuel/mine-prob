@@ -216,6 +216,7 @@ export default function ProbCalc(){
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
     const [floatingtiles, setFloatingtiles] = useState([]);
+    let mines;
 
     const urlPaste = async () => {
         if (!imageUrl) return;
@@ -241,7 +242,7 @@ export default function ProbCalc(){
             console.error(error);
         }
     };
-    function make1dGroup(uo, bc, uochecked, bcchecked){
+    function make1dGroup(uo, bc, uochecked=0, bcchecked=0){
         for (let u = uochecked; u < uo.length; u++){
             let neis = getNei(uo[u], width, height);
             neis.forEach(nei => {
@@ -265,17 +266,12 @@ export default function ProbCalc(){
             bcchecked += 1;
         }
         if (bcchecked === bc.length && uochecked === uo.length){
-            return [uo, bc, uochecked, bcchecked];
+            return [uo, bc];
         }
-        else {
-            [uo, bc, uochecked, bcchecked] = make1dGroup(uo, bc, uochecked, bcchecked);
-            if (bcchecked === bc.length && uochecked === uo.length){
-                return [uo, bc, uochecked, bcchecked];
-            }
-        }
+        return make1dGroup(uo, bc, uochecked, bcchecked);
     }
     function make1dGroups(){
-        const [unopenedCells, borderCells, mines] = get1dData();
+        const [unopenedCells, borderCells] = get1dData();
         if (unopenedCells.length === 0)
             throw new Error();
         let gs = [];
@@ -308,9 +304,8 @@ export default function ProbCalc(){
             }
             let uo = [uoStart];
             let bc = [];
-            let uochecked = 0;
-            let bcchecked = 0;
-            let [uogroup, bcgroup] = make1dGroup(uo, bc, uochecked, bcchecked);
+            
+            let [uogroup, bcgroup] = make1dGroup(uo, bc);
             for (let bc = 0; bc < bcgroup.length; bc++){
                 for (let border = 0; border < borderCells.length; border++){
                     if (bcgroup[bc] === borderCells[border][0]){
@@ -320,7 +315,7 @@ export default function ProbCalc(){
                 }
             }
             uogroupsLength += uogroup.length;
-            gs.push([uogroup.sort((a, b) => a - b), bcgroup, mines]);
+            gs.push([uogroup.sort((a, b) => a - b), bcgroup]);
         }
         return gs;
     }
@@ -334,10 +329,10 @@ export default function ProbCalc(){
         catch{ console.timeEnd("1d"); return; }
         let combsAll = [];
         let localsAll = [];
-        const [unopened, border, mines] = get1dData();
+        const unopened = get1dData()[0];
         for (let group = 0; group < groups.length; group++){
-            let [unopenedCells, borderCells, mines] = groups[group];
-            const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, mines, width, height, unopened);
+            let [unopenedCells, borderCells] = groups[group];
+            const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, unopened);
             combsAll.push(combs);
             localsAll.push(localToGlobal);
         }
@@ -416,9 +411,10 @@ export default function ProbCalc(){
                 flags++;
             }
         }
-        return [unopened, borders, minesleft - flags];
+        mines = minesleft - flags;
+        return [unopened, borders];
     }
-    function findCombs(unopenedCells, borderCells, minesLeft, width, height, globalUo) {
+    function findCombs(unopenedCells, borderCells, globalUo) {
         const combinations = [];
     
         const localToGlobalBit = new Uint8Array(unopenedCells.length);
@@ -465,7 +461,7 @@ export default function ProbCalc(){
         }
     
         function backtrack(index, currentMask, used) {
-            if (used > minesLeft) return;
+            if (used > mines) return;
             if (index === unopenedCells.length) {
                 if (isValid(currentMask)) {
                     combinations.push(currentMask);
