@@ -270,8 +270,7 @@ export default function ProbCalc(){
         }
         return make1dGroup(uo, bc, uochecked, bcchecked);
     }
-    function make1dGroups(){
-        const [unopenedCells, borderCells] = get1dData();
+    function make1dGroups(unopenedCells, borderCells){
         if (unopenedCells.length === 0)
             throw new Error();
         let gs = [];
@@ -323,13 +322,13 @@ export default function ProbCalc(){
         let fld = [...dfield];
         console.time("1d");
         let groups;
+        const [unopened, borders] = get1dData();
         try {
-            groups = make1dGroups();
+            groups = make1dGroups(unopened, borders);
         }
         catch{ console.timeEnd("1d"); return; }
         let combsAll = [];
         let localsAll = [];
-        const unopened = get1dData()[0];
         for (let group = 0; group < groups.length; group++){
             let [unopenedCells, borderCells] = groups[group];
             const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, unopened);
@@ -425,18 +424,23 @@ export default function ProbCalc(){
         });
 
         let min = 0;
-        const borderInfo = borderCells.map(([index, number]) => {
+        const borderInfo = [];
+        const seen = new Set();
+        for (const [index, number] of borderCells){
             if (number > min) min = number;
             const neighbors = getNei(index, width, height);
             let mask = 0;
             for (const nei of neighbors) {
                 const bit = cellToBit.get(nei);
-                if (bit !== undefined) {
+                if (bit !== undefined){
                     mask |= 1 << bit;
                 }
             }
-            return { mask, number };
-        });
+            if (!seen.has(mask)){
+                seen.add(mask);
+                borderInfo.push({mask, number});
+            }
+        }
     
         const popCountCache = new Uint8Array(256);
         for (let i = 0; i < 256; i++) {
@@ -452,21 +456,20 @@ export default function ProbCalc(){
             );
         }
     
-        function isValid(mask) {
-            for (const { mask: m, number } of borderInfo) {
-                const overlap = mask & m;
-                if (countBits(overlap) !== number) return false;
-            }
-            return true;
-        }
-    
         const limit = 1 << unopenedCells.length;
         for (let mask = 0; mask < limit; mask++){
             const bits = countBits(mask);
             if (bits > mines || bits < min) continue;
-            if (isValid(mask)){
+            let valid = true;
+            for (const { mask: m, number } of borderInfo) {
+                const overlap = mask & m;
+                if (countBits(overlap) !== number){
+                    valid = false;
+                    break;
+                }
+            }
+            if (valid){
                 combinations.push(mask);
-                continue;
             }
         }
 
