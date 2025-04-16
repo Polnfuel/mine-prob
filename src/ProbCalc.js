@@ -328,16 +328,22 @@ export default function ProbCalc(){
             groups = make1dGroups(unopened, borders);
         }
         catch{ console.timeEnd("1d"); return; }
-        let combsAll = [];
-        let localsAll = [];
-        for (let group = 0; group < groups.length; group++){
-            let [unopenedCells, borderCells] = groups[group];
-            const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, unopened);
-            combsAll.push(combs);
-            localsAll.push(localToGlobal);
-        }
         if (groups.length > 0) {
-            const combinations = genCombs(combsAll, mines, localsAll);
+            let combsAll = [];
+            let localsAll = [];
+            for (let group = 0; group < groups.length; group++){
+                let [unopenedCells, borderCells] = groups[group];
+                const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, unopened);
+                combsAll.push(combs);
+                localsAll.push(localToGlobal);
+            }
+            let combinations;
+            if (unopened.length <= 32) {
+                combinations = genCombs32(combsAll, mines, localsAll);
+            }
+            else if (unopened.length > 32){
+                combinations = genCombs(combsAll, mines, localsAll);
+            }
             let fltiles = [];
             let closedtiles = 0;
             for (let cell = 0; cell < dfield.length; cell++){
@@ -385,15 +391,27 @@ export default function ProbCalc(){
             fltiles.forEach(tile => {
                 fld[tile] = Math.round(flProb * 100);
             });
-
-            for (let uo = 0; uo < unopened.length; uo++) {
-                let weights = 0;
-                for (const combo of combs) {
-                    if ((combo[0] >> BigInt(uo)) & 1n) {
-                        weights += combo[1];
+            if (unopened.length <= 32){
+                for (let uo = 0; uo < unopened.length; uo++) {
+                    let weights = 0;
+                    for (const combo of combs) {
+                        if ((combo[0] >> uo) & 1) {
+                            weights += combo[1];
+                        }
                     }
+                    fld[unopened[uo]] = Math.round(weights / sumweights * 100);
                 }
-                fld[unopened[uo]] = Math.round(weights / sumweights * 100);
+            }
+            else if (unopened.length > 32) {
+                for (let uo = 0; uo < unopened.length; uo++) {
+                    let weights = 0;
+                    for (const combo of combs) {
+                        if ((combo[0] >> BigInt(uo)) & 1n) {
+                            weights += combo[1];
+                        }
+                    }
+                    fld[unopened[uo]] = Math.round(weights / sumweights * 100);
+                }
             }
             setDField(fld);
             let fi = oneDtoFld(fld, width);
@@ -515,6 +533,41 @@ export default function ProbCalc(){
         }
     
         backtrack(0, 0n, 0);
+        return result;
+    }
+    function genCombs32(maskGroups, maxMines, localsAll) {
+        const result = new Map();
+
+        const cachedGroups = maskGroups.map((group, i) => {
+            const localToGlobal = localsAll[i];
+            return group.map(localMask => {
+                let globalMask = 0;
+                let count = 0;
+                for (let j = 0; j < localToGlobal.length; j++) {
+                    if ((localMask >> j) & 1) {
+                        globalMask |= 1 << localToGlobal[j];
+                        count++;
+                    }
+                }
+                return { mask: globalMask, count };
+            });
+        });
+    
+        function backtrack(index, currentMask, usedMines) {
+            if (usedMines > maxMines) return;
+    
+            if (index === cachedGroups.length) {
+                if (usedMines > maxcount) maxcount = usedMines;
+                result.set(currentMask, usedMines);
+                return;
+            }
+    
+            for (const { mask, count } of cachedGroups[index]) {
+                backtrack(index + 1, currentMask | mask, usedMines + count);
+            }
+        }
+    
+        backtrack(0, 0, 0);
         return result;
     }
     return (
