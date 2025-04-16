@@ -217,6 +217,7 @@ export default function ProbCalc(){
     const [imageUrl, setImageUrl] = useState("");
     const [floatingtiles, setFloatingtiles] = useState([]);
     let mines;
+    let maxcount = 0;
 
     const urlPaste = async () => {
         if (!imageUrl) return;
@@ -336,7 +337,7 @@ export default function ProbCalc(){
             localsAll.push(localToGlobal);
         }
         if (groups.length > 0) {
-            let combinations = genCombs(combsAll, mines, localsAll);
+            const combinations = genCombs(combsAll, mines, localsAll);
             let fltiles = [];
             let closedtiles = 0;
             for (let cell = 0; cell < dfield.length; cell++){
@@ -347,46 +348,52 @@ export default function ProbCalc(){
                     }
                 }
             }
-
+            const floatingtiles = closedtiles - unopened.length;
             const density = mines / closedtiles;
             const mvalue = (1 - density) / density;
-            let maxcount = 0;
-            combinations.values().forEach(len => {
-                if (len > maxcount) maxcount = len;
-            });
-            const floatingtiles = closedtiles - unopened.length;
-
-            let combs = new Map();
+            
+            const combs = new Map();
+            const maplen = new Map();
             let sumweights = 0;
-            let sumweightsFl = 0;
-            let weightsFl = 0;
-            function C(fl, m){
-                let result = 1;
-                for (let i = 0; i < m; i++){
-                    result = result * (fl - i) / (i + 1);
-                }
-                return result;
-            }
             for (const entry of combinations) {
                 const weight = 1 * (mvalue**(maxcount-entry[1]));
                 sumweights += weight;
-                const flCount = weight * C(floatingtiles, mines - entry[1]);
-                sumweightsFl += flCount;
-                weightsFl += flCount * (mines - entry[1]) / floatingtiles;
-                combs.set(entry[0], [entry[1], weight]);
+                if (!maplen.has(entry[1])) maplen.set(entry[1], [1, weight]);
+                else maplen.set(entry[1], [maplen.get(entry[1])[0] + 1, weight]);
+                combs.set(entry[0], weight);
             }
-            const flProb = weightsFl / sumweightsFl;
+            let sumweightsFl = 0;
+            let weightsFl = 0;
+            for (const entry of maplen){
+                const weight = entry[1][1];
+                const count = entry[1][0];
+                const M = entry[0];
+                const m = mines - M;
+                weightsFl += (count * weight * B(floatingtiles - m + 1, m - 1, maxcount - M));
+                sumweightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M));
+            }
+
+            function B(left, right, len){
+                let result = 1;
+                for (let i = 0; i < len; i++){
+                    result *= ((left + i) / (right - i));
+                }
+                return result;
+            }
+
+            const flProb = (weightsFl / sumweightsFl) * (mines - maxcount) / floatingtiles;
             fltiles.forEach(tile => {
-                fld[tile] = Math.floor(flProb * 100);
+                fld[tile] = Math.round(flProb * 100);
             });
+
             for (let uo = 0; uo < unopened.length; uo++) {
                 let weights = 0;
                 for (const combo of combs) {
                     if ((combo[0] >> BigInt(uo)) & 1n) {
-                        weights += combo[1][1];
+                        weights += combo[1];
                     }
                 }
-                fld[unopened[uo]] = Math.floor(weights / sumweights * 100);
+                fld[unopened[uo]] = Math.round(weights / sumweights * 100);
             }
             setDField(fld);
             let fi = oneDtoFld(fld, width);
@@ -497,6 +504,7 @@ export default function ProbCalc(){
             if (usedMines > maxMines) return;
     
             if (index === cachedGroups.length) {
+                if (usedMines > maxcount) maxcount = usedMines;
                 result.set(currentMask, usedMines);
                 return;
             }
