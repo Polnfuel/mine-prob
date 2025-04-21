@@ -370,24 +370,30 @@ export default function ProbCalc(){
             }
             let sumweightsFl = 0;
             let weightsFl = 0;
+            let isMax = false;
+            if (maxcount === mines) isMax = true;
             for (const entry of maplen){
                 const weight = entry[1][1];
                 const count = entry[1][0];
                 const M = entry[0];
                 const m = mines - M;
-                weightsFl += (count * weight * B(floatingtiles - m + 1, m - 1, maxcount - M));
+                if (isMax) weightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M) * (m / floatingtiles));
+                else weightsFl += (count * weight * B(floatingtiles - m + 1, m - 1, maxcount - M));
                 sumweightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M));
             }
 
             function B(left, right, len){
                 let result = 1;
-                for (let i = 0; i < len; i++){
-                    result *= ((left + i) / (right - i));
+                if (right !== 0){
+                    for (let i = 0; i < len; i++){
+                        result *= ((left + i) / (right - i));
+                    }
                 }
                 return result;
             }
-
-            const flProb = (weightsFl / sumweightsFl) * (mines - maxcount) / floatingtiles;
+            let flProb;
+            if (isMax) flProb = weightsFl / sumweightsFl;
+            else flProb = (weightsFl / sumweightsFl) * (mines - maxcount) / floatingtiles;
             fltiles.forEach(tile => {
                 fld[tile] = Math.round(flProb * 100);
             });
