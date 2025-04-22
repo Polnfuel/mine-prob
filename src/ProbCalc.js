@@ -339,10 +339,10 @@ export default function ProbCalc(){
             }
             let combinations;
             if (unopened.length <= 32) {
-                combinations = genCombs32(combsAll, mines, localsAll);
+                combinations = genCombs32(combsAll, mines, localsAll, unopened);
             }
             else if (unopened.length > 32){
-                combinations = genCombs(combsAll, mines, localsAll);
+                combinations = genCombs(combsAll, mines, localsAll, unopened);
             }
             let fltiles = [];
             let closedtiles = 0;
@@ -359,22 +359,22 @@ export default function ProbCalc(){
             const mvalue = (1 - density) / density;
             
             const combs = new Map();
-            const maplen = new Map();
             let sumweights = 0;
-            for (const entry of combinations) {
-                const weight = 1 * (mvalue**(maxcount-entry[1]));
-                sumweights += weight;
-                if (!maplen.has(entry[1])) maplen.set(entry[1], [1, weight]);
-                else maplen.set(entry[1], [maplen.get(entry[1])[0] + 1, weight]);
-                combs.set(entry[0], weight);
+            maxcount = Math.max(...combinations.keys());
+
+            for (const key of combinations.keys()) {
+                const weight = mvalue**(maxcount-key);
+                sumweights += weight * combinations.get(key)[unopened.length];
+                combs.set(key, weight);
             }
+
             let sumweightsFl = 0;
             let weightsFl = 0;
             let isMax = false;
             if (maxcount === mines) isMax = true;
-            for (const entry of maplen){
-                const weight = entry[1][1];
-                const count = entry[1][0];
+            for (const entry of combinations){
+                const weight = combs.get(entry[0]);
+                const count = entry[1][unopened.length];
                 const M = entry[0];
                 const m = mines - M;
                 if (isMax) weightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M) * (m / floatingtiles));
@@ -397,27 +397,12 @@ export default function ProbCalc(){
             fltiles.forEach(tile => {
                 fld[tile] = Math.round(flProb * 100);
             });
-            if (unopened.length <= 32){
-                for (let uo = 0; uo < unopened.length; uo++) {
-                    let weights = 0;
-                    for (const combo of combs) {
-                        if ((combo[0] >> uo) & 1) {
-                            weights += combo[1];
-                        }
-                    }
-                    fld[unopened[uo]] = Math.round(weights / sumweights * 100);
+            for (let uo = 0; uo < unopened.length; uo++) {
+                let weights = 0;
+                for (const entry of combinations) {
+                    weights += entry[1][uo] * combs.get(entry[0]);
                 }
-            }
-            else if (unopened.length > 32) {
-                for (let uo = 0; uo < unopened.length; uo++) {
-                    let weights = 0;
-                    for (const combo of combs) {
-                        if ((combo[0] >> BigInt(uo)) & 1n) {
-                            weights += combo[1];
-                        }
-                    }
-                    fld[unopened[uo]] = Math.round(weights / sumweights * 100);
-                }
+                fld[unopened[uo]] = Math.round(weights / sumweights * 100);
             }
             setDField(fld);
             let fi = oneDtoFld(fld, width);
@@ -506,8 +491,9 @@ export default function ProbCalc(){
 
         return [combinations, localToGlobalBit];
     }
-    function genCombs(maskGroups, maxMines, localsAll) {
-        const result = new Map();
+    function genCombs(maskGroups, maxMines, localsAll, globalUo) {
+        const result = [];
+        const numToIndex = new Map();
 
         const cachedGroups = maskGroups.map((group, i) => {
             const localToGlobal = localsAll[i];
@@ -528,8 +514,16 @@ export default function ProbCalc(){
             if (usedMines > maxMines) return;
     
             if (index === cachedGroups.length) {
-                if (usedMines > maxcount) maxcount = usedMines;
-                result.set(currentMask, usedMines);
+                if (!numToIndex.has(usedMines)){
+                    numToIndex.set(usedMines, result.length);
+                    result[result.length] = new Uint32Array(globalUo.length + 1);
+                }
+                for (let i = 0; i < globalUo.length; i++){
+                    if ((currentMask >> BigInt(i)) & 1n){
+                        result[numToIndex.get(usedMines)][i]++;
+                    }
+                }
+                result[numToIndex.get(usedMines)][globalUo.length]++;
                 return;
             }
     
@@ -539,10 +533,16 @@ export default function ProbCalc(){
         }
     
         backtrack(0, 0n, 0);
-        return result;
+
+        for (let key of numToIndex.keys()){
+            numToIndex.set(key, result[numToIndex.get(key)]);
+        }
+
+        return numToIndex;
     }
-    function genCombs32(maskGroups, maxMines, localsAll) {
-        const result = new Map();
+    function genCombs32(maskGroups, maxMines, localsAll, globalUo) {
+        const result = [];
+        const numToIndex = new Map();
 
         const cachedGroups = maskGroups.map((group, i) => {
             const localToGlobal = localsAll[i];
@@ -563,8 +563,16 @@ export default function ProbCalc(){
             if (usedMines > maxMines) return;
     
             if (index === cachedGroups.length) {
-                if (usedMines > maxcount) maxcount = usedMines;
-                result.set(currentMask, usedMines);
+                if (!numToIndex.has(usedMines)){
+                    numToIndex.set(usedMines, result.length);
+                    result[result.length] = new Uint32Array(globalUo.length + 1);
+                }
+                for (let i = 0; i < globalUo.length; i++){
+                    if ((currentMask >> i) & 1){
+                        result[numToIndex.get(usedMines)][i]++;
+                    }
+                }
+                result[numToIndex.get(usedMines)][globalUo.length]++;
                 return;
             }
     
@@ -574,7 +582,12 @@ export default function ProbCalc(){
         }
     
         backtrack(0, 0, 0);
-        return result;
+
+        for (let key of numToIndex.keys()){
+            numToIndex.set(key, result[numToIndex.get(key)]);
+        }
+
+        return numToIndex;
     }
     return (
         <div className="probCalc">
