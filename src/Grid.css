@@ -1,20 +1,29 @@
+@font-face {
+    font-family: 'Minesweeper';
+    src: url('/public/fonts/mine-sweeper.otf');
+}
 .grid {
     display: grid;
     user-select: none;
     margin: 20px;
+    border-right: 1px solid #808080;
+    border-bottom: 1px solid #808080;
 }
 .cell {
-    width: 30px;
-    height: 30px;
+    width: 25px;
+    height: 25px;
     background-color: #c6c6c6;
-    border: 1px solid #808080;
+    border-left: 1px solid #808080;
+    border-top: 1px solid #808080;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 .cell span {
-    font-size: 24px;
-    font-weight: 900;
+    font-family: 'Minesweeper';
+    font-size: 15px;
+    font-weight: 500;
+    padding-left: 1px;
 }
 .cell span.cell1 {
     color: #0000f7;
@@ -40,36 +49,45 @@
 .cell span.cell8 {
     color: #777777;
 }
-.cell:has(span.cellC, span.cellF, span.cellprob) {
+.cell span.cell9, span.cell10, span.cellprob {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 800;
+    padding-right: 1px;
+    padding-top: 1px;
+}
+.cell:has(span.cell10) {
+    background-image: url('/public/image/flagico.png');
+    background-size: 20px 20px;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+.cell:has(span.cell9, span.cell10, span.cellprob) {
     background-color: #c6c6c6;
-    border-left: 4px solid #ffffff;
-    border-top: 4px solid #ffffff;
-    border-bottom: 4px solid #808080;
-    border-right: 4px solid #808080;
+    border-left: 3px solid #ffffff;
+    border-top: 3px solid #ffffff;
+    border-bottom: 3px solid #808080;
+    border-right: 3px solid #808080;
 }
 .cell span.cellprob {
-    color: #000000;
-    font-weight: 800;
-    font-size: 14px;
+    color: rgb(54, 54, 54);
+    font-weight: 700;
+    font-size: 12px;
 }
 .cell:has(span.zeroprob) {
-    background-color: #56ff8e;
+    background-color: #4eff89;
 }
 .cell span.flprob {
-    color: #7e7d7d;
+    color: #7d7d7d;
 }
 .cell span.lowprob {
-    color: #00882d;
+    color: #069501;
 }
 .cell span.medprob {
-    color: #7b7d00;
+    color: #909000;
 }
 .cell span.highprob {
-    color: #8d0101;
+    color: #a90000;
 }
 .cell:has(span.mineprob) {
     background-color: #ff5656;
-}
-.cell:has(span.redcell){
-    background-color: #ff3030;
 }

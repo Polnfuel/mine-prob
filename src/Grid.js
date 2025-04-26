@@ -1,7 +1,7 @@
 import './Grid.css';
 import React, {useEffect, useRef} from 'react';
 
-function Grid({field, fl}) {
+function Grid({field}) {
     const width = field.length;
     const height = field[0].length;
     const gridRef = useRef(null);
@@ -15,58 +15,56 @@ function Grid({field, fl}) {
             grid.removeEventListener('contextmenu', disable);
         };  
     });
-    function include(arr, cell){
-        for (let i = 0; i < arr.length; i++){
-            if (JSON.stringify(arr[i]) === JSON.stringify(cell)){
-                return true;
-            }
-        }
-        return false;
-    }
     const rows = Array.from({length: width}, (_, row) => 
         Array.from({length: height}, (_, col) => {
             let content = '';
             let classname;
-            if (typeof field[row][col] === 'number'){
+            let probname;
+            if (field[row][col] >= 50){
                 classname = 'cellprob';
-                if (include(fl, [row, col])){
-                    classname += " flprob";
+                if (field[row][col] >= 151){
+                    probname = "flprob";
                 }
-                else if (field[row][col] === 0){
-                    classname += " zeroprob";
+                else if (field[row][col] === 50){
+                    probname = "zeroprob";
                 }
-                else if (field[row][col] < 15){
-                    classname += " lowprob";
+                else if (field[row][col] < 65){
+                    probname = "lowprob";
                 }
-                else if (field[row][col] < 50){
-                    classname += " medprob";
+                else if (field[row][col] < 100){
+                    probname = "medprob";
                 }
-                else if (field[row][col] <= 99){
-                    classname += " highprob";
+                else if (field[row][col] <= 149){
+                    probname = "highprob";
                 }
-                else if (field[row][col] === 100) {
-                    classname += " mineprob";
+                else if (field[row][col] === 150) {
+                    probname = "mineprob";
                 }
             }
             else {
                 classname = `cell${field[row][col]}`;
             }
             
-            if (field[row][col] !== "0" && field[row][col] !== "C")
+            if (field[row][col] !== 0 && field[row][col] !== 9 && field[row][col] !== 10)
             {
-                if (field[row][col] === "F")
-                    content = "⚐";
-                else
+                if (field[row][col] >= 50 && field[row][col] <= 150){
+                    content = field[row][col] - 50;
+                }
+                else if (field[row][col] >= 151) {
+                    content = field[row][col] - 151;
+                }
+                else {
                     content = field[row][col];
+                }
             }
             return (
             <div key={`${row}-${col}`} className='cell'>
-                <span className={classname}>
+                <span className={classname + (probname ? ` ${probname}` : "")}>
                     {content}
                 </span>
             </div>);
         }));
-    return <div ref={gridRef} className='grid' style={{gridTemplateColumns: `repeat(${height}, 30px)`, gridTemplateRows: `repeat(${width}, 30px)`, width: 'fit-content'}}>{rows}</div>
+    return <div ref={gridRef} className='grid' style={{gridTemplateColumns: `repeat(${height}, 25px)`, width: 'fit-content'}}>{rows}</div>
 }
 
 export default Grid;
