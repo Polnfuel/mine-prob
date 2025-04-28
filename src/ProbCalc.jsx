@@ -219,7 +219,7 @@ export default function ProbCalc(){
     const [floatingtiles, setFloatingtiles] = useState([]);
     let mines;
     let maxcount = 0;
-
+    
     const urlPaste = async () => {
         if (!imageUrl) return;
     
@@ -625,16 +625,16 @@ export default function ProbCalc(){
     return (
         <div className="probCalc">
             <div className="pasteItems">
-                <button type="button" onClick={urlPaste}>Paste</button>
-                <input type="text" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="Paste image URL"/>
+                <div className="button" onClick={urlPaste}>Paste</div>
+                <input value={imageUrl} type="text" placeholder="Paste screenshot URL" onChange={(e) => setImageUrl(e.target.value)}/>
             </div>
             <div className="fieldItems">
-                <button type="button" onClick={calc1d}>Probs</button>
-                <input style={{width: "50px"}} value={width} type="text" onChange={(e) => setWidth(e.target.value)}/>
-                <input style={{width: "50px"}} value={height} type="text" onChange={(e) => setHeight(e.target.value)} />
-                <input style={{width: "50px"}} value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)} />
+                <div className="button" onClick={calc1d}>Probs</div>
+                <input readOnly value={width} type="text"/>
+                <input readOnly value={height} type="text"/>
+                <input value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)}/>
             </div>
-            <Grid field={field} fl={floatingtiles} />
+            <Grid field={field} fl={floatingtiles}/>
         </div>
     );
 }

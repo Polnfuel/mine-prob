@@ -52,12 +52,9 @@ function Grid({field, fl}) {
                 classname = `cell${field[row][col]}`;
             }
             
-            if (field[row][col] !== "0" && field[row][col] !== "C")
+            if (field[row][col] !== "0" && field[row][col] !== "C" && field[row][col] !== "F")
             {
-                if (field[row][col] === "F")
-                    content = "⚐";
-                else
-                    content = field[row][col];
+                content = field[row][col];
             }
             return (
             <div key={`${row}-${col}`} className='cell'>
@@ -66,7 +63,7 @@ function Grid({field, fl}) {
                 </span>
             </div>);
         }));
-    return <div ref={gridRef} className='grid' style={{gridTemplateColumns: `repeat(${height}, 30px)`, gridTemplateRows: `repeat(${width}, 30px)`, width: 'fit-content'}}>{rows}</div>
+    return <div ref={gridRef} className='grid' style={{gridTemplateColumns: `repeat(${height}, 25px)`, width: 'fit-content'}}>{rows}</div>
 }
 
 export default Grid;
