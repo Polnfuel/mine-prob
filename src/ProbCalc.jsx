@@ -1,6 +1,7 @@
 import React, {useState} from "react";
 import "./ProbCalc.css";
 import Grid from "./Grid";
+import createWorker from './worker.js?worker&inline';
 
 function get2dArray(data, width) {
     let array = [];
@@ -319,7 +320,7 @@ export default function ProbCalc(){
         }
         return gs;
     }
-    function calc1d(){
+    async function calc1d(){
         let fld = [...dfield];
         console.time("1d");
         let groups;
@@ -333,7 +334,7 @@ export default function ProbCalc(){
             let localsAll = [];
             for (let group = 0; group < groups.length; group++){
                 let [unopenedCells, borderCells] = groups[group];
-                const [combs, localToGlobal] = findCombs(unopenedCells, borderCells, unopened);
+                const [combs, localToGlobal] = await findCombs(unopenedCells, borderCells, unopened);
                 combsAll.push(combs);
                 localsAll.push(localToGlobal);
             }
@@ -429,8 +430,8 @@ export default function ProbCalc(){
         mines = minesleft - flags;
         return [unopened, borders];
     }
-    function findCombs(unopenedCells, borderCells, globalUo) {
-        const combinations = [];
+    async function findCombs(unopenedCells, borderCells, globalUo) {
+        let combinations = [];
     
         const localToGlobalBit = new Uint8Array(unopenedCells.length);
         const cellToBit = new Map();
@@ -471,24 +472,56 @@ export default function ProbCalc(){
                 popCountCache[(n >> 24) & 255]
             );
         }
-    
-        const limit = 1 << unopenedCells.length;
-        for (let mask = 0; mask < limit; mask++){
-            const bits = countBits(mask);
-            if (bits > mines || bits < min) continue;
-            let valid = true;
-            for (const { mask: m, number } of borderInfo) {
-                const overlap = mask & m;
-                if (countBits(overlap) !== number){
-                    valid = false;
-                    break;
-                }
+        if (unopenedCells.length > 24){
+            const limit = (2**unopenedCells.length) - 1;
+            const threadscount = 4;
+            const rangeSize = Math.floor(limit / threadscount) + 1;
+            const promises = [];
+
+            for (let i = 0; i < threadscount; i++){
+                const start = i * rangeSize;
+                const end = start + rangeSize - 1;
+                const worker = createWorker();
+                const promise = new Promise((resolve, reject) => {
+                    worker.onmessage = (e) => {
+                        worker.terminate();
+                        resolve(e.data);
+                    };
+                    worker.onerror = (err) => {
+                        worker.terminate();
+                        reject(err);
+                    };
+                });
+                worker.postMessage([start, end, min, mines, borderInfo, popCountCache]);
+                promises.push(promise);
             }
-            if (valid){
-                combinations.push(mask);
+            try {
+                const results = await Promise.all(promises);
+                combinations = results.flat();
+                console.log("Done", combinations.length);
+            }
+            catch (err) {
+                console.error("Error in Worker: ", err);
             }
         }
-
+        else {
+            const limit = 1 << unopenedCells.length;
+            for (let mask = 0; mask < limit; mask++){
+                const bits = countBits(mask);
+                if (bits > mines || bits < min) continue;
+                let valid = true;
+                for (const { mask: m, number } of borderInfo) {
+                    const overlap = mask & m;
+                    if (countBits(overlap) !== number){
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid){
+                    combinations.push(mask);
+                }
+            }
+        }
         return [combinations, localToGlobalBit];
     }
     function genCombs(maskGroups, maxMines, localsAll, globalUo) {
