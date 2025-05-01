@@ -492,7 +492,7 @@ export default function ProbCalc(){
                         reject(err);
                     };
                 });
-                worker.postMessage([start, end, min, mines, borderInfo, popCountCache]);
+                worker.postMessage([start, end, min, mines, borderInfo, unopenedCells.length]);
                 promises.push(promise);
             }
             try {

@@ -1,29 +1,31 @@
-onmessage = (e) => {
-    const [start, end, min, max, borderInfo, popCountCache] = e.data;
-    const workerCombs = [];
+import Calc from './calc.mjs';
 
-    function countBits(n) {
-        return (
-            popCountCache[n & 255] +
-            popCountCache[(n >> 8) & 255] +
-            popCountCache[(n >> 16) & 255] +
-            popCountCache[(n >> 24) & 255]
-        );
+let wasm;
+
+onmessage = async (e) => {
+    if (!wasm) {
+        wasm = await Calc();
     }
-    for (let mask = start; mask <= end; mask++){
-        const bits = countBits(mask);
-        if (bits < min || bits > max) continue;
-        let valid = true;
-        for (const { mask: m, number } of borderInfo) {
-            const overlap = mask & m;
-            if (countBits(overlap) !== number){
-                valid = false;
-                break;
-            }
-        }
-        if (valid){
-            workerCombs.push(mask);
+    const [start, end, min, max, borderInfo, uosize] = e.data;
+    let borders = new wasm.vectorPairUint64Uint8();
+    borderInfo.forEach(bord => {
+        let arr = [Number(bord["mask"]), Number(bord["number"])];
+        borders.push_back(arr);
+    });
+
+    const uint64arr = wasm['findCombs'](start, end, min, max, borders);
+    let workerCombs = [];
+    const len = uint64arr.size();
+    if (uosize <= 50){
+        for (let i = 0; i < len; i++){
+            workerCombs.push(Number(uint64arr.get(i)));
         }
     }
+    else {
+        for (let i = 0; i < len; i++){
+            workerCombs.push(uint64arr.get(i));
+        }
+    }
+    
     postMessage(workerCombs);
 };
