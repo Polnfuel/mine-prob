@@ -1,7 +1,8 @@
-import React, {useState} from "react";
+import React, {useEffect, useState} from "react";
 import "./ProbCalc.css";
 import Grid from "./Grid";
 import createWorker from './worker.js?worker&inline';
+import Gen from './gen.mjs';
 
 function get2dArray(data, width) {
     let array = [];
@@ -24,38 +25,38 @@ function getUserField(array, width, height){
             const pixel = array[j][i];
             if (JSON.stringify(pixel) === JSON.stringify([198, 198, 198, 255])){
                 if (JSON.stringify(array[j][i - 13]) === JSON.stringify([255, 255, 255, 255])){
-                    userfield[h][w] = "C";
+                    userfield[h][w] = 9;
                 }
                 else if (JSON.stringify(array[j - 6][i]) === JSON.stringify([0, 0, 0, 255])) {
-                    userfield[h][w] = "7";
+                    userfield[h][w] = 7;
                 }
                 else {
-                    userfield[h][w] = "0";
+                    userfield[h][w] = 0;
                 }
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 247, 255])){
-                userfield[h][w] = "1";
+                userfield[h][w] = 1;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 119, 0, 255])){
-                userfield[h][w] = "2";
+                userfield[h][w] = 2;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([236, 0, 0, 255])){
-                userfield[h][w] = "3";
+                userfield[h][w] = 3;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 128, 255])){
-                userfield[h][w] = "4";
+                userfield[h][w] = 4;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([128, 0, 0, 255])){
-                userfield[h][w] = "5";
+                userfield[h][w] = 5;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([0, 128, 128, 255])){
-                userfield[h][w] = "6";
+                userfield[h][w] = 6;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([112, 112, 112, 255])){
-                userfield[h][w] = "8";
+                userfield[h][w] = 7;
             }
             else if (JSON.stringify(pixel) === JSON.stringify([100, 100, 100, 255])){
-                userfield[h][w] = "F";
+                userfield[h][w] = 10;
             }
         }
     }
@@ -68,7 +69,6 @@ const loadImage = (src) => {
       img.onload = () => resolve(img);
       img.onerror = (err) => reject(err);
     });
-
 };
 const readFile = (file) => {
     return new Promise((resolve, reject) => {
@@ -116,15 +116,6 @@ function oneDtoFld(dfield, width){
         fld[row][col] = dfield[cell];
     }
     return fld;
-}
-function oneDarrayToCellArray(darray, width){
-    let arr = Array.from({length: darray.length}, () => null);
-    for (let cell = 0; cell < darray.length; cell++){
-        const row = Math.floor(darray[cell] / width);
-        const col = darray[cell] % width;
-        arr[cell] = [row, col];
-    }
-    return arr;
 }
 function getNei(cell, width, height){
     let mas;
@@ -181,7 +172,7 @@ function getNumCount(cell, dfield, width){
     let mas = [];
     mas = getNei(cell, width, height);
     mas.forEach(nei => {
-        if (dfield[nei] !== "F" && dfield[nei] !== "C")
+        if (dfield[nei] !== 10 && dfield[nei] !== 9)
             count++;
     });
     return count;
@@ -192,7 +183,7 @@ function getFlagCount(cell, dfield, width){
     let mas = [];
     mas = getNei(cell, width, height);
     mas.forEach(nei => {
-        if (dfield[nei] === "F")
+        if (dfield[nei] === 10)
             count++;
     });
     return count;
@@ -203,7 +194,7 @@ function getClosedCount(cell, dfield, width){
     let mas = [];
     mas = getNei(cell, width, height);
     mas.forEach(nei => {
-        if (dfield[nei] === "C")
+        if (dfield[nei] === 9)
             count++;
     });
     return count;
@@ -216,9 +207,12 @@ export default function ProbCalc(){
     const [dfield, setDField] = useState(Array.from({length: 30 * 16}, () => null));
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
-    const [floatingtiles, setFloatingtiles] = useState([]);
     let mines;
-    let maxcount = 0;
+    const [wasm, setWasm] = useState(null);
+
+    useEffect(() => {
+        Gen().then(setWasm);
+    }, []);
     
     const urlPaste = async () => {
         if (!imageUrl) return;
@@ -248,7 +242,7 @@ export default function ProbCalc(){
         for (let u = uochecked; u < uo.length; u++){
             let neis = getNei(uo[u], width, height);
             neis.forEach(nei => {
-                if (Number(dfield[nei]) > 0){
+                if (dfield[nei] < 9){
                     if (!bc.includes(nei)){
                         bc.push(nei);
                     }
@@ -259,7 +253,7 @@ export default function ProbCalc(){
         for (let b = bcchecked; b < bc.length; b++){
             let neis = getNei(bc[b], width, height);
             neis.forEach(nei => {
-                if (dfield[nei] === "C"){
+                if (dfield[nei] === 9){
                     if (!uo.includes(nei)){
                         uo.push(nei);
                     }
@@ -321,7 +315,6 @@ export default function ProbCalc(){
         return gs;
     }
     async function calc1d(){
-        let fld = [...dfield];
         console.time("1d");
         let groups;
         const [unopened, borders] = get1dData();
@@ -329,101 +322,68 @@ export default function ProbCalc(){
             groups = make1dGroups(unopened, borders);
         }
         catch{ console.timeEnd("1d"); return; }
-        if (groups.length > 0) {
-            let combsAll = [];
-            let localsAll = [];
-            for (let group = 0; group < groups.length; group++){
-                let [unopenedCells, borderCells] = groups[group];
-                const [combs, localToGlobal] = await findCombs(unopenedCells, borderCells, unopened);
-                combsAll.push(combs);
-                localsAll.push(localToGlobal);
-            }
-            let combinations;
-            if (unopened.length <= 32) {
-                combinations = genCombs32(combsAll, mines, localsAll, unopened);
-            }
-            else if (unopened.length > 32){
-                combinations = genCombs(combsAll, mines, localsAll, unopened);
-            }
-            let fltiles = [];
-            let closedtiles = 0;
-            for (let cell = 0; cell < dfield.length; cell++){
-                if (dfield[cell] === "C"){
-                    closedtiles++;
-                    if (getNumCount(cell, dfield, width) === 0){
-                        fltiles.push(cell);
-                    }
-                }
-            }
-            const floatingtiles = closedtiles - unopened.length;
-            const density = mines / closedtiles;
-            const mvalue = (1 - density) / density;
-            
-            const combs = new Map();
-            let sumweights = 0;
-            maxcount = Math.max(...combinations.keys());
-
-            for (const key of combinations.keys()) {
-                const weight = mvalue**(maxcount-key);
-                sumweights += weight * combinations.get(key)[unopened.length];
-                combs.set(key, weight);
-            }
-
-            let sumweightsFl = 0;
-            let weightsFl = 0;
-            let isMax = false;
-            if (maxcount === mines) isMax = true;
-            for (const entry of combinations){
-                const weight = combs.get(entry[0]);
-                const count = entry[1][unopened.length];
-                const M = entry[0];
-                const m = mines - M;
-                if (isMax) weightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M) * (m / floatingtiles));
-                else weightsFl += (count * weight * B(floatingtiles - m + 1, m - 1, maxcount - M));
-                sumweightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M));
-            }
-
-            function B(left, right, len){
-                let result = 1;
-                if (right !== 0){
-                    for (let i = 0; i < len; i++){
-                        result *= ((left + i) / (right - i));
-                    }
-                }
-                return result;
-            }
-            let flProb;
-            if (isMax) flProb = weightsFl / sumweightsFl;
-            else flProb = (weightsFl / sumweightsFl) * (mines - maxcount) / floatingtiles;
-            fltiles.forEach(tile => {
-                fld[tile] = Math.round(flProb * 100);
-            });
-            for (let uo = 0; uo < unopened.length; uo++) {
-                let weights = 0;
-                for (const entry of combinations) {
-                    weights += entry[1][uo] * combs.get(entry[0]);
-                }
-                fld[unopened[uo]] = Math.round(weights / sumweights * 100);
-            }
-            setDField(fld);
-            let fi = oneDtoFld(fld, width);
-            console.timeEnd("1d");
-            setField(fi);
-            setFloatingtiles(oneDarrayToCellArray(fltiles, width));
+        let combsAll = [];
+        let localsAll = [];
+        let allAreNumbers = true;
+        for (let group = 0; group < groups.length; group++){
+            let [unopenedCells, borderCells] = groups[group];
+            if (unopenedCells.length > 53) allAreNumbers = false; 
+            const [combs, localToGlobal] = await findCombs(unopenedCells, borderCells, unopened);
+            combsAll.push(combs);
+            localsAll.push(localToGlobal);
         }
+
+        const dfldVec = new wasm.vectorUint8_t();
+        dfield.forEach(cell => {
+            dfldVec.push_back(cell);
+        });
+        const loclsVec = new wasm.vectorVectorUint8_t();
+        localsAll.forEach(local => {
+            const loc = new wasm.vectorUint8_t();
+            local.forEach(cell => {
+                loc.push_back(cell);
+            });
+            loclsVec.push_back(loc);
+        });
+        const globuoVec = new wasm.vectorUint16_t();
+        unopened.forEach(cell => {
+            globuoVec.push_back(cell);
+        });
+        
+        const dfld = [];
+        if (allAreNumbers) {
+            const maskGroupsVec = new wasm.VectorVectorUint64_t();
+            combsAll.forEach(group => {
+                const grp = new wasm.vectorUint64_t();
+                group.forEach(cell => {
+                    grp.push_back(cell);
+                });
+                maskGroupsVec.push_back(grp);
+            });
+            const dretarray = wasm['calculateNumber'](maskGroupsVec, loclsVec, dfldVec, Number(width), Number(height), Number(mines), globuoVec);
+            
+            for (let i = 0; i < dretarray.size(); i++){
+                dfld[i] = dretarray.get(i);
+            }
+        }
+        else {
+
+        }
+        console.timeEnd("1d");
+        setField(oneDtoFld(dfld, width));
     }
     function get1dData() {
         let unopened = [];
         let borders = [];
         let flags = 0;
         for (let cell = 0; cell < dfield.length; cell++){
-            if (dfield[cell] === "C" && getNumCount(cell, dfield, width) > 0){
+            if (dfield[cell] === 9 && getNumCount(cell, dfield, width) > 0){
                 unopened.push(cell);
             }
-            else if (dfield[cell] !== "C" && dfield[cell] !== "F" && getClosedCount(cell, dfield, width) > 0){
+            else if (dfield[cell] !== 9 && dfield[cell] !== 10 && getClosedCount(cell, dfield, width) > 0){
                 borders.push([cell, Number(dfield[cell] - getFlagCount(cell, dfield, width))]);
             }
-            else if (dfield[cell] === "F"){
+            else if (dfield[cell] === 10){
                 flags++;
             }
         }
@@ -458,21 +418,38 @@ export default function ProbCalc(){
                 borderInfo.push({mask, number});
             }
         }
-    
-        const popCountCache = new Uint8Array(256);
-        for (let i = 0; i < 256; i++) {
-            popCountCache[i] = (i & 1) + popCountCache[i >> 1];
-        }
 
-        function countBits(n) {
-            return (
-                popCountCache[n & 255] +
-                popCountCache[(n >> 8) & 255] +
-                popCountCache[(n >> 16) & 255] +
-                popCountCache[(n >> 24) & 255]
-            );
+        if (unopenedCells.length <= 25) {
+            const popCountCache = new Uint8Array(256);
+            for (let i = 0; i < 256; i++) {
+                popCountCache[i] = (i & 1) + popCountCache[i >> 1];
+            }
+            function countBits(n) {
+                return (
+                    popCountCache[n & 255] +
+                    popCountCache[(n >> 8) & 255] +
+                    popCountCache[(n >> 16) & 255] +
+                    popCountCache[(n >> 24) & 255]
+                );
+            }
+            const limit = 1 << unopenedCells.length;
+            for (let mask = 0; mask < limit; mask++){
+                const bits = countBits(mask);
+                if (bits > mines || bits < min) continue;
+                let valid = true;
+                for (const { mask: m, number } of borderInfo) {
+                    const overlap = mask & m;
+                    if (countBits(overlap) !== number){
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid){
+                    combinations.push(mask);
+                }
+            }
         }
-        if (unopenedCells.length > 24){
+        else {
             const limit = (2**unopenedCells.length) - 1;
             const threadscount = 4;
             const rangeSize = Math.floor(limit / threadscount) + 1;
@@ -504,123 +481,7 @@ export default function ProbCalc(){
                 console.error("Error in Worker: ", err);
             }
         }
-        else {
-            const limit = 1 << unopenedCells.length;
-            for (let mask = 0; mask < limit; mask++){
-                const bits = countBits(mask);
-                if (bits > mines || bits < min) continue;
-                let valid = true;
-                for (const { mask: m, number } of borderInfo) {
-                    const overlap = mask & m;
-                    if (countBits(overlap) !== number){
-                        valid = false;
-                        break;
-                    }
-                }
-                if (valid){
-                    combinations.push(mask);
-                }
-            }
-        }
         return [combinations, localToGlobalBit];
-    }
-    function genCombs(maskGroups, maxMines, localsAll, globalUo) {
-        const result = [];
-        const numToIndex = new Map();
-
-        const cachedGroups = maskGroups.map((group, i) => {
-            const localToGlobal = localsAll[i];
-            return group.map(localMask => {
-                let globalMask = 0n;
-                let count = 0;
-                for (let j = 0; j < localToGlobal.length; j++) {
-                    if ((localMask >> j) & 1) {
-                        globalMask |= 1n << BigInt(localToGlobal[j]);
-                        count++;
-                    }
-                }
-                return { mask: globalMask, count };
-            });
-        });
-    
-        function backtrack(index, currentMask, usedMines) {
-            if (usedMines > maxMines) return;
-    
-            if (index === cachedGroups.length) {
-                if (!numToIndex.has(usedMines)){
-                    numToIndex.set(usedMines, result.length);
-                    result[result.length] = new Uint32Array(globalUo.length + 1);
-                }
-                for (let i = 0; i < globalUo.length; i++){
-                    if ((currentMask >> BigInt(i)) & 1n){
-                        result[numToIndex.get(usedMines)][i]++;
-                    }
-                }
-                result[numToIndex.get(usedMines)][globalUo.length]++;
-                return;
-            }
-    
-            for (const { mask, count } of cachedGroups[index]) {
-                backtrack(index + 1, currentMask | mask, usedMines + count);
-            }
-        }
-    
-        backtrack(0, 0n, 0);
-
-        for (let key of numToIndex.keys()){
-            numToIndex.set(key, result[numToIndex.get(key)]);
-        }
-
-        return numToIndex;
-    }
-    function genCombs32(maskGroups, maxMines, localsAll, globalUo) {
-        const result = [];
-        const numToIndex = new Map();
-
-        const cachedGroups = maskGroups.map((group, i) => {
-            const localToGlobal = localsAll[i];
-            return group.map(localMask => {
-                let globalMask = 0;
-                let count = 0;
-                for (let j = 0; j < localToGlobal.length; j++) {
-                    if ((localMask >> j) & 1) {
-                        globalMask |= 1 << localToGlobal[j];
-                        count++;
-                    }
-                }
-                return { mask: globalMask, count };
-            });
-        });
-    
-        function backtrack(index, currentMask, usedMines) {
-            if (usedMines > maxMines) return;
-    
-            if (index === cachedGroups.length) {
-                if (!numToIndex.has(usedMines)){
-                    numToIndex.set(usedMines, result.length);
-                    result[result.length] = new Uint32Array(globalUo.length + 1);
-                }
-                for (let i = 0; i < globalUo.length; i++){
-                    if ((currentMask >> i) & 1){
-                        result[numToIndex.get(usedMines)][i]++;
-                    }
-                }
-                result[numToIndex.get(usedMines)][globalUo.length]++;
-                return;
-            }
-    
-            for (const { mask, count } of cachedGroups[index]) {
-                backtrack(index + 1, currentMask | mask, usedMines + count);
-            }
-        }
-    
-        backtrack(0, 0, 0);
-
-        for (let key of numToIndex.keys()){
-            numToIndex.set(key, result[numToIndex.get(key)]);
-        }
-
-        return numToIndex;
     }
     return (
         <div className="probCalc">
@@ -634,7 +495,7 @@ export default function ProbCalc(){
                 <input readOnly value={height} type="text"/>
                 <input value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)}/>
             </div>
-            <Grid field={field} fl={floatingtiles}/>
+            <Grid field={field}/>
         </div>
     );
 }

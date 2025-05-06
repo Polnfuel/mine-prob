@@ -16,7 +16,7 @@ onmessage = async (e) => {
     const uint64arr = wasm['findCombs'](start, end, min, max, borders);
     let workerCombs = [];
     const len = uint64arr.size();
-    if (uosize <= 50){
+    if (uosize <= 53){
         for (let i = 0; i < len; i++){
             workerCombs.push(Number(uint64arr.get(i)));
         }
