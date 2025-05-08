@@ -3,6 +3,20 @@ import "./ProbCalc.css";
 import Grid from "./Grid";
 import Calc from './calc.mjs';
 
+const COLORS = {
+    OPENED: [198, 198, 198, 255],
+    CLOSED: [255, 255, 255, 255],
+    FLAG: [100, 100, 100, 255],
+    ONE: [0, 0, 247, 255],
+    TWO: [0, 119, 0, 255],
+    THREE: [236, 0, 0, 255],
+    FOUR: [0, 0, 128, 255],
+    FIVE: [128, 0, 0, 255],
+    SIX: [0, 128, 128, 255],
+    SEVEN: [0, 0, 0, 255],
+    EIGHT: [112, 112, 112, 255],
+};
+
 function get2dArray(data, width) {
     let array = [];
     let row = [];
@@ -16,87 +30,54 @@ function get2dArray(data, width) {
     return array;
 }
 function getUserField(array, width, height){
+    function compare(pixel, color){
+        return pixel[0] == color[0] && pixel[1] == color[1] && pixel[2] == color[2] && pixel[3] == color[3];
+    }
     let userfield = Array.from({length: height}, () => Array.from({length: width}, () => null) );
     for (let j = 101; j < (height - 1) * 26 + 102; j += 26){
         for (let i = 33; i < (width - 1) * 26 + 34; i += 26){
             const w = (i - 33) / 26;
             const h = (j - 101) / 26;
             const pixel = array[j][i];
-            if (JSON.stringify(pixel) === JSON.stringify([198, 198, 198, 255])){
-                if (JSON.stringify(array[j][i - 13]) === JSON.stringify([255, 255, 255, 255])){
+            if (compare(pixel, COLORS.OPENED)){
+                if (compare(array[j][i - 13], COLORS.CLOSED)){
                     userfield[h][w] = 9;
                 }
-                else if (JSON.stringify(array[j - 6][i]) === JSON.stringify([0, 0, 0, 255])) {
+                else if (compare(array[j - 6][i], COLORS.SEVEN)) {
                     userfield[h][w] = 7;
                 }
                 else {
                     userfield[h][w] = 0;
                 }
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 247, 255])){
+            else if (compare(pixel, COLORS.ONE)){
                 userfield[h][w] = 1;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([0, 119, 0, 255])){
+            else if (compare(pixel, COLORS.TWO)){
                 userfield[h][w] = 2;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([236, 0, 0, 255])){
+            else if (compare(pixel, COLORS.THREE)){
                 userfield[h][w] = 3;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([0, 0, 128, 255])){
+            else if (compare(pixel, COLORS.FOUR)){
                 userfield[h][w] = 4;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([128, 0, 0, 255])){
+            else if (compare(pixel, COLORS.FIVE)){
                 userfield[h][w] = 5;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([0, 128, 128, 255])){
+            else if (compare(pixel, COLORS.SIX)){
                 userfield[h][w] = 6;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([112, 112, 112, 255])){
-                userfield[h][w] = 7;
+            else if (compare(pixel, COLORS.EIGHT)){
+                userfield[h][w] = 8;
             }
-            else if (JSON.stringify(pixel) === JSON.stringify([100, 100, 100, 255])){
+            else if (compare(pixel, COLORS.FLAG)){
                 userfield[h][w] = 10;
             }
         }
     }
     return userfield;
 }
-const loadImage = (src) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = () => resolve(img);
-      img.onerror = (err) => reject(err);
-    });
-};
-const readFile = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = (err) => reject(err);
-      reader.readAsDataURL(file);
-    });
-};
-async function processImage(image) {
-    const img = await loadImage(image);
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, img.width, img.height);
-    const pixels = imageData.data;
-
-    let array = get2dArray(pixels, img.width);
-
-    let width = (img.width - 39) / 26;
-    let height = (img.height - 106) / 26;
-
-    const userfield = getUserField(array, width, height);
-    return [userfield, width, height];
-}
-
 function fldto1d(field){
     let fld = [];
     for (let i = 0; i < field.length; i++){
@@ -118,8 +99,8 @@ function oneDtoFld(dfield, width){
 }
 
 export default function ProbCalc(){
-    const [height, setHeight] = useState("16");
-    const [width, setWidth] = useState("30");
+    const [width, setWidth] = useState(30);
+    const [height, setHeight] = useState(16);
     const [field, setField] = useState(Array.from({length: 16}, () => Array.from({length: 30}, () => null) ));
     const [dfield, setDField] = useState(Array.from({length: 30 * 16}, () => null));
     const [minesleft, setMinesleft] = useState("99");
@@ -130,21 +111,41 @@ export default function ProbCalc(){
         Calc().then(setWasm);
     }, []);
     
-    const urlPaste = async () => {
+    async function urlPaste() {
         if (!imageUrl) return;
-    
         try {
             const response = await fetch(imageUrl, { mode: "cors" });
-            if (!response.ok) throw new Error("Couldn't upload image");
+            if (!response.ok) return;
     
             const blob = await response.blob();
-            if (!blob.type.startsWith("image/")) {
-                return;
-            }
-    
-            const imageData = await readFile(blob);
-            const [userfield, w, h] = await processImage(imageData);
+            if (!blob.type.startsWith("image/")) return;
+            
+            const reader = new FileReader();
+            const imageBase64 = await new Promise(resolve => {
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(blob);
+            });
+
+            const img = new Image();
+            const image = new Promise(resolve => {
+                img.onload = () => resolve();
+            });
+            img.src = imageBase64;
+            await image;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+            const pixels = ctx.getImageData(0, 0, img.width, img.height).data;
+
+            const array = get2dArray(pixels, img.width);
+            const w = (img.width - 39) / 26;
+            const h = (img.height - 106) / 26;
+            const userfield = getUserField(array, w, h);
             const duserfield = fldto1d(userfield);
+
             setField(userfield);
             setDField(duserfield);
             setWidth(w);
@@ -153,22 +154,24 @@ export default function ProbCalc(){
         } catch (error) {
             console.error(error);
         }
-    };
+    }
     function calc1d(){
-        console.time("1d");
-        const dfldVec = new wasm.vectorUint8_t();
-        dfield.forEach(cell => {
-            dfldVec.push_back(cell);
-        });
-        
-        const dretarray = wasm['calc'](dfldVec, Number(width), Number(height), Number(minesleft));
-        
-        let dfld = [];
-        for (let i = 0; i < dretarray.size(); i++){
-            dfld[i] = dretarray.get(i);
+        if (Number(minesleft) > 0) {
+            console.time("1d");
+            const dfldVec = new wasm.vectorUint8_t();
+            dfield.forEach(cell => {
+                dfldVec.push_back(cell);
+            });
+
+            const dretarray = wasm['calc'](dfldVec, width, height, Number(minesleft));
+            
+            let dfld = [];
+            for (let i = 0; i < dretarray.size(); i++){
+                dfld[i] = dretarray.get(i);
+            }
+            console.timeEnd("1d");
+            setField(oneDtoFld(dfld, width));
         }
-        console.timeEnd("1d");
-        setField(oneDtoFld(dfld, width));
     }
     return (
         <div className="probCalc">
