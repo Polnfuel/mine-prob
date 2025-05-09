@@ -73,7 +73,10 @@ vector<uint16_t> getNei(uint16_t cell) {
 }
 double B(uint16_t left, uint16_t right, uint16_t len) {
     double result = 1;
-    if (right != 0) {
+    if (right == UINT16_MAX) {
+        return 0;
+    }
+    else if (right > 0) {
         for (uint16_t i = 0; i < len; i++) {
             result = result * (left + i) / (right - i);
         }
@@ -425,54 +428,55 @@ map<uint8_t, vector<uint32_t>> static genCombs64(const vector<vector<uint64_t>>&
     return combinations;
 }
 
-void calculate(map<uint8_t, vector<uint32_t>>& combinations){
-    vector<uint16_t> fltiles;
-    uint16_t closedtiles = 0;
-    for (uint16_t cell = 0; cell < dfsize; cell++) {
-        if (dfield[cell] == 9) {
-            closedtiles++;
-            if (getNumCount(cell) == 0) {
-                fltiles.emplace_back(cell);
+void calculate(map<uint8_t, vector<uint32_t>>& combinations) {
+    uint8_t maxcount = prev(combinations.end())->first;
+    uint16_t mincnt = mines - maxcount;
+
+    if (mincnt >= 0) {
+        vector<uint16_t> fltiles;
+        for (uint16_t cell = 0; cell < dfsize; cell++) {
+            if (dfield[cell] == 9) {
+                if (getNumCount(cell) == 0) {
+                    fltiles.emplace_back(cell);
+                }
             }
         }
-    }
-    const uint16_t floatingtiles = closedtiles - guosize;
-    const double density = static_cast<double>(mines) / closedtiles;
-    const double mvalue = (1 - density) / density;
-    map<uint8_t, double> combs;
-    double sumweights = 0;
-    uint8_t maxcount = prev(combinations.end())->first;
-    for (const auto& [key, arr] : combinations) {
-        const double weight = pow(mvalue, maxcount - key);
-        sumweights += weight * arr[guosize];
-        combs.insert({ key, weight });
-    }
-    double sumweightsFl = 0;
-    double weightsFl = 0;
-    bool isMax = false;
-    if (maxcount == mines) isMax = true;
-    for (const auto& entry : combinations) {
-        const double weight = combs[entry.first];
-        const uint32_t count = entry.second[guosize];
-        const uint8_t M = entry.first;
-        const uint16_t m = mines - M;
-        if (isMax) weightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M) * (static_cast<double>(m) / floatingtiles));
-        else weightsFl += (count * weight * B(floatingtiles - m + 1, m - 1, maxcount - M));
-        sumweightsFl += (count * weight * B(floatingtiles - m + 1, m, maxcount - M));
-    }
-    double flProb;
-    if (isMax) flProb = weightsFl / sumweightsFl;
-    else flProb = (weightsFl / sumweightsFl) * (mines - maxcount) / floatingtiles;
-    uint8_t flUint8 = round(flProb * 100) + 151;
-    for (const auto tile : fltiles) {
-        dfield[tile] = flUint8;
-    }
-    for (uint8_t uo = 0; uo < guosize; uo++) {
-        double weights = 0;
-        for (const auto& entry : combinations) {
-            weights += entry.second[uo] * combs[entry.first];
+        const uint16_t floatingtiles = fltiles.size();
+
+        map<uint8_t, double> weights;
+        double weightsFl = 0;
+        double sumweights = 0;
+        for (const auto& [m, arr] : combinations) {
+            const uint16_t right = min(mines - m, floatingtiles - mines + m);
+            const uint16_t left = floatingtiles - right + 1;
+            const uint16_t len = right - mincnt;
+            const double weight = B(left, right, len);
+            uint16_t rightFl;
+            if (mines - m == 0) rightFl = UINT16_MAX;
+            else rightFl = min(mines - m - 1, floatingtiles - mines + m + 1);
+            const uint16_t leftFl = floatingtiles - rightFl;
+            const uint16_t lenFl = rightFl + 1 - mincnt;
+            const double weightFl = B(leftFl, rightFl, lenFl);
+            weightsFl += weightFl * arr[guosize];
+            sumweights += weight * arr[guosize];
+            weights.insert({ m, weight });
         }
-        dfield[globalUO[uo]] = static_cast<uint8_t>(round(weights / sumweights * 100) + 50);
+        bool isMax = false;
+        if (maxcount == mines) isMax = true;
+        double flProb;
+        if (isMax) flProb = weightsFl / sumweights;
+        else flProb = (weightsFl / sumweights) * mincnt / floatingtiles;
+        uint8_t flUint8 = round(flProb * 100) + 151;
+        for (const auto tile : fltiles) {
+            dfield[tile] = flUint8;
+        }
+        for (uint8_t uo = 0; uo < guosize; uo++) {
+            double d = 0;
+            for (const auto& entry : combinations) {
+                d += entry.second[uo] * weights[entry.first];
+            }
+            dfield[globalUO[uo]] = static_cast<uint8_t>(round(d / sumweights * 100) + 50);
+        }
     }
 }
 
