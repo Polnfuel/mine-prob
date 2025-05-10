@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <vector>
 #include <algorithm>
-#include <bit>
 #include <map>
 #include <set>
 #include <utility>
@@ -354,15 +353,33 @@ void static backtrack128(const uint8_t index, const __uint128_t currentMask, con
         result[numToIndex[usedMines]][guosize]++;
         return;
     }
-    for (const auto& [mask, count] : globalGroups[index]){
+
+    for (const auto& [mask, count] : globalGroups[index]) {
         backtrack128(index + 1, currentMask | mask, usedMines + count, globalGroups, result, numToIndex);
     }
 }
 
-map<uint8_t, vector<uint32_t>> static genCombs128(vector<map<__uint128_t, uint8_t>>& globalGroups, const vector<vector<uint8_t>>& localsAll){
+map<uint8_t, vector<uint32_t>> static genCombs128(const vector<vector<uint64_t>>& maskGroups, const vector<vector<uint8_t>>& localsAll){
     vector<vector<uint32_t>> result;
     map<uint8_t, uint8_t> numToIndex;
-    
+    const uint8_t grcount = maskGroups.size();
+
+    vector<map<__uint128_t, uint8_t>> globalGroups(grcount);
+    for (uint8_t i = 0; i < grcount; i++) {
+        const vector<uint8_t> local = localsAll[i];
+        const vector<uint64_t> group = maskGroups[i];
+        for (uint64_t localMask : group) {
+            __uint128_t globalMask = 0;
+            uint8_t count = 0;
+            for (uint8_t j = 0; j < local.size(); j++) {
+                if ((localMask >> j) & 1) {
+                    globalMask |= ((__uint128_t)1 << local[j]);
+                    count++;
+                }
+            }
+            globalGroups[i].insert({ globalMask, count });
+        }
+    }
     backtrack128(0, 0, 0, globalGroups, result, numToIndex);
     map<uint8_t, vector<uint32_t>> combinations;
 
@@ -372,14 +389,14 @@ map<uint8_t, vector<uint32_t>> static genCombs128(vector<map<__uint128_t, uint8_
     return combinations;
 }
 
-void static backtrack64(uint8_t index, uint64_t currentMask, uint8_t usedMines,
-    vector<map<uint64_t, uint8_t>>& cachedGroups,
+void static backtrack64(const uint8_t index, const uint64_t currentMask, const uint8_t usedMines,
+    vector<map<uint64_t, uint8_t>>& globalGroups,
     vector<vector<uint32_t>>& result,
     map<uint8_t, uint8_t>& numToIndex
 ) {
     if (usedMines > mines) return;
 
-    if (index == cachedGroups.size()) {
+    if (index == globalGroups.size()) {
         auto [it, inserted] = numToIndex.try_emplace(usedMines, result.size());
         if (inserted) {
             result.emplace_back(vector<uint32_t>(guosize + 1));
@@ -393,8 +410,8 @@ void static backtrack64(uint8_t index, uint64_t currentMask, uint8_t usedMines,
         return;
     }
 
-    for (const auto& [mask, count] : cachedGroups[index]) {
-        backtrack64(index + 1, currentMask | mask, usedMines + count, cachedGroups, result, numToIndex);
+    for (const auto& [mask, count] : globalGroups[index]) {
+        backtrack64(index + 1, currentMask | mask, usedMines + count, globalGroups, result, numToIndex);
     }
 }
 
@@ -403,7 +420,7 @@ map<uint8_t, vector<uint32_t>> static genCombs64(const vector<vector<uint64_t>>&
     map<uint8_t, uint8_t> numToIndex;
     const uint8_t grcount = maskGroups.size();
 
-    vector<map<uint64_t, uint8_t>> cachedGroups(grcount);
+    vector<map<uint64_t, uint8_t>> globalGroups(grcount);
     for (uint8_t i = 0; i < grcount; i++) {
         const vector<uint8_t> local = localsAll[i];
         const vector<uint64_t> group = maskGroups[i];
@@ -416,10 +433,10 @@ map<uint8_t, vector<uint32_t>> static genCombs64(const vector<vector<uint64_t>>&
                     count++;
                 }
             }
-            cachedGroups[i].insert({ globalMask, count });
+            globalGroups[i].insert({ globalMask, count });
         }
     }
-    backtrack64(0, 0, 0, cachedGroups, result, numToIndex);
+    backtrack64(0, 0, 0, globalGroups, result, numToIndex);
     map<uint8_t, vector<uint32_t>> combinations;
 
     for (const auto& [num, index] : numToIndex) {
@@ -496,13 +513,22 @@ vector<uint8_t> calc(vector<uint8_t> dfld, uint8_t w, uint8_t h, uint16_t mL) {
     //End of initializing
 
     get1dData();
+    if (guosize > 128) {
+        return { 20 };
+    }
     vector<pair<vector<uint16_t>, vector<pair<uint16_t, uint8_t>>>> groups;
     make1dGroups(groups);
 
+    if (groups.size() == 0) {
+        return { 21 };
+    }
     vector<vector<uint64_t>> combsAll;
     vector<vector<uint8_t>> localsAll;
     for (uint8_t group = 0; group < groups.size(); group++) {
         auto [unopenedCells, borderCells] = groups[group];
+        if (unopenedCells.size() > 64) {
+            return { 20 };
+        }
         const auto [combs, locals] = findCombs(unopenedCells, borderCells);
         combsAll.emplace_back(combs);
         localsAll.emplace_back(locals);
@@ -513,24 +539,7 @@ vector<uint8_t> calc(vector<uint8_t> dfld, uint8_t w, uint8_t h, uint16_t mL) {
         combinations = genCombs64(combsAll, localsAll);
     }
     else if (guosize > 64) {
-        const uint8_t grcount = combsAll.size();
-        vector<map<__uint128_t, uint8_t>> globalGroups(grcount);
-        for (uint8_t i = 0; i < grcount; i++){
-            const vector<uint8_t> local = localsAll[i];
-            const vector<uint64_t> group = combsAll[i];
-            for (uint64_t localMask : group){
-                __uint128_t globalMask = 0;
-                uint8_t count = 0;
-                for (uint8_t j = 0; j < local.size(); j++){
-                    if ((localMask >> j) & 1) {
-                        globalMask |= ((__uint128_t)1 << local[j]);
-                        count++;
-                    }
-                }
-                globalGroups[i].insert({ globalMask, count });
-            }
-        }
-        combinations = genCombs128(globalGroups, localsAll);
+        combinations = genCombs128(combsAll, localsAll);
     }
     calculate(combinations);
     return dfield;

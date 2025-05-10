@@ -29,7 +29,11 @@
     width: 50px;
     margin-right: 5px;
 }
-.button:active{
+.button:active {
     border-color: white;
     background-color: rgb(215, 255, 223);
+}
+#warning {
+    margin-top: 10px;
+    margin-left: 20px;
 }

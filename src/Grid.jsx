@@ -1,5 +1,5 @@
 import './Grid.css';
-import React, {useEffect, useRef} from 'react';
+import {useEffect, useRef} from 'react';
 
 function Grid({field}) {
     const width = field.length;

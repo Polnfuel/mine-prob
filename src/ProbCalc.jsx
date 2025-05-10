@@ -106,6 +106,7 @@ export default function ProbCalc(){
     const [minesleft, setMinesleft] = useState("99");
     const [imageUrl, setImageUrl] = useState("");
     const [wasm, setWasm] = useState(null);
+    const [warnMessage, setWarnMessage] = useState(null);
 
     useEffect(() => {
         Calc().then(setWasm);
@@ -151,26 +152,39 @@ export default function ProbCalc(){
             setWidth(w);
             setHeight(h);
             setImageUrl("");
+            setWarnMessage(null);
         } catch (error) {
             console.error(error);
         }
     }
     function calc1d(){
-        if (Number(minesleft) > 0) {
-            console.time("1d");
-            const dfldVec = new wasm.vectorUint8_t();
-            dfield.forEach(cell => {
-                dfldVec.push_back(cell);
-            });
+        if (Number(minesleft) > 0 && dfield[0] !== null && Number(minesleft) <= dfield.length) {
+            try {
+                console.time("1d");
+                const dfldVec = new wasm.vectorUint8_t();
+                dfield.forEach(cell => {
+                    dfldVec.push_back(cell);
+                });
+                const dretarray = wasm['calc'](dfldVec, width, height, Number(minesleft));
 
-            const dretarray = wasm['calc'](dfldVec, width, height, Number(minesleft));
-            
-            let dfld = [];
-            for (let i = 0; i < dretarray.size(); i++){
-                dfld[i] = dretarray.get(i);
+                if (dretarray.size() == 1) throw new Error(dretarray.get(0));
+
+                let dfld = [];
+                for (let i = 0; i < dretarray.size(); i++){
+                    dfld[i] = dretarray.get(i);
+                }
+                console.timeEnd("1d");
+                setField(oneDtoFld(dfld, width));
             }
-            console.timeEnd("1d");
-            setField(oneDtoFld(dfld, width));
+            catch (e) {
+                if (e.message == 20) {
+                    setWarnMessage("Too many tiles for calculation");
+                }
+                else if (e.message == 21) {
+                    setWarnMessage("There is nothing to calculate");
+                }
+                console.timeEnd("1d");
+            }
         }
     }
     return (
@@ -185,6 +199,7 @@ export default function ProbCalc(){
                 <input readOnly value={height} type="text"/>
                 <input value={minesleft} type="text" onChange={(e) => setMinesleft(e.target.value)}/>
             </div>
+            <span id="warning" style={{display: warnMessage ? "block" : "none"}}>{warnMessage}</span>
             <Grid field={field}/>
         </div>
     );
