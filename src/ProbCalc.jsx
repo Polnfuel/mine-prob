@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import {useEffect, useState} from "react";
 import "./ProbCalc.css";
 import Grid from "./Grid";
 import Calc from './calc.mjs';

@@ -55,7 +55,7 @@
     padding-top: 1px;
 }
 .cell:has(span.cell10) {
-    background-image: url('/minesweeper/image/flagico.png');
+    background-image: url('/minesweeper/image/flagicon.svg');
     background-size: 20px 20px;
     background-repeat: no-repeat;
     background-position: center;
@@ -76,16 +76,16 @@
     background-color: #4eff89;
 }
 .cell span.flprob {
-    color: #7d7d7d;
+    color: #888888;
 }
 .cell span.lowprob {
-    color: #069501;
+    color: #557700;
 }
 .cell span.medprob {
-    color: #906700;
+    color: #aa5500;
 }
 .cell span.highprob {
-    color: #a90000;
+    color: #dd0000;
 }
 .cell:has(span.mineprob) {
     background-color: #ff5656;

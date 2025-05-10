@@ -28,10 +28,10 @@ function Grid({field}) {
                 else if (field[row][col] === 50){
                     probname = "zeroprob";
                 }
-                else if (field[row][col] < 65){
+                else if (field[row][col] < 70){
                     probname = "lowprob";
                 }
-                else if (field[row][col] < 100){
+                else if (field[row][col] < 116){
                     probname = "medprob";
                 }
                 else if (field[row][col] <= 149){
