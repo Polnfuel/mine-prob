@@ -329,7 +329,7 @@ pair<vector<uint64_t>, vector<uint8_t>> findCombs(vector<uint16_t> unopenedCells
     uint16_t uosize = unopenedCells.size();
     map<uint16_t, vector<uint64_t>> brdCombs = fillup(brdMasks, brdNums);
     lastConst = *borderSet.rbegin();
-    backtrack(brdVec[0], 0, uoneis, bcneis, brdCombs, brdNums, brdMasks, combinations);
+    backtrack(*borderSet.begin(), 0, uoneis, bcneis, brdCombs, brdNums, brdMasks, combinations);
 
     return {combinations, localToGlobalBit};
 }
