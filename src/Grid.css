@@ -1,6 +1,6 @@
 @font-face {
     font-family: 'Minesweeper';
-    src: url('/minesweeper/fonts/mine-sweeper.otf');
+    src: url('/mine-prob/fonts/mine-sweeper.otf');
 }
 .grid {
     display: grid;
@@ -55,7 +55,7 @@
     padding-top: 1px;
 }
 .cell:has(span.cell10) {
-    background-image: url('/minesweeper/image/flagicon.svg');
+    background-image: url('/mine-prob/image/flagicon.svg');
     background-size: 20px 20px;
     background-repeat: no-repeat;
     background-position: center;
