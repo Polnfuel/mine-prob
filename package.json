@@ -1,8 +1,8 @@
 {
-  "name": "minesreact",
-  "version": "0.1.0",
+  "name": "mine-prob",
+  "version": "1.0.0",
   "private": true,
-  "homepage": "https://polnfuel.github.io/minesweeper",
+  "homepage": "https://polnfuel.github.io/mine-prob",
   "dependencies": {
     "gh-pages": "^6.3.0",
     "react": "^19.0.0",
