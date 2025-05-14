@@ -1,10 +1,14 @@
 import './Grid.css';
-import {useEffect, useRef} from 'react';
+import {JSX, useEffect, useRef} from 'react';
+
+interface Props {
+    field: (number | null)[][];
+}
 
 /**
  * Grid component for rendering the minesweeper board
  * 
- * @param {Array<Array<Number>>} field - 2D array representing the minesweeper board state where:
+ * @param {Array<Array<number>>} field - 2D array representing the minesweeper board state where:
  * - 0-8: Number of mines around cell
  * - 9: Closed cell
  * - 10: Flagged cell
@@ -12,14 +16,14 @@ import {useEffect, useRef} from 'react';
  * - 151+: FloatingTile with mine probability (value - 151 = probability percentage)
  * @returns {JSX.Element} Rendered grid component
  */
-export default function Grid({field}) {
+export default function Grid({field} : Props) : JSX.Element {
     const boardHeight = field.length;
     const boardWidth = field[0].length;
-    const gridRef = useRef(null);
+    const gridRef = useRef<HTMLDivElement>(null);
     
     // Disable right-click context menu on the grid
     useEffect(() => {
-        const preventContextMenu = (event) => event.preventDefault();
+        const preventContextMenu = (event : Event) => event.preventDefault();
         const gridElement = gridRef.current;
         
         if (gridElement) {
@@ -39,42 +43,40 @@ export default function Grid({field}) {
      * @param {number} cellValue - Value of the minesweeper cell
      * @returns {Object} Object containing class name and content for the cell
      */
-    function getCellDisplayProperties(cellValue) {
-        let content = '';
-        let baseClassName;
-        let probabilityClassName = null;
+    function getCellDisplayProperties(cellValue : number | null) {
+        let content : number | null = null;
+        let baseClassName : string = `cell${cellValue}`;
+        let probabilityClassName : string = "";
         
-        // Handle probability cells (50-151+)
-        if (cellValue >= 50) {
-            baseClassName = 'cellprob';
-            
-            // Assign probability-specific class names based on value ranges
-            if (cellValue >= 151) {
-                probabilityClassName = "flprob"; // Floating tiles probability
-                content = cellValue - 151;  // Display percentage
-            } else if (cellValue === 50) {
-                probabilityClassName = "zeroprob"; // 0% probability
-                content = cellValue - 50;  // Display percentage
-            } else if (cellValue < 70) {
-                probabilityClassName = "lowprob"; // Low probability
-                content = cellValue - 50;  // Display percentage
-            } else if (cellValue < 116) {
-                probabilityClassName = "medprob"; // Medium probability
-                content = cellValue - 50;  // Display percentage
-            } else if (cellValue <= 149) {
-                probabilityClassName = "highprob"; // High probability
-                content = cellValue - 50;  // Display percentage
-            } else if (cellValue === 150) {
-                probabilityClassName = "mineprob"; // 100% mine probability
-                content = cellValue - 50;  // Display percentage
-            }
-        } else {
-            // Regular cell classes (0-10)
-            baseClassName = `cell${cellValue}`;
-            
-            // Set content for number cells (1-8)
-            if (cellValue !== 0 && cellValue !== 9 && cellValue !== 10) {
-                content = cellValue;
+        if (cellValue !== null){
+            // Handle probability cells (50-151+)
+            if (cellValue >= 50) {
+                baseClassName = 'cellprob';
+                content = cellValue - 50;
+
+                // Assign probability-specific class names based on value ranges
+                if (cellValue >= 151) {
+                    probabilityClassName = "flprob"; // Floating tiles probability
+                    content = cellValue - 151;  // Display percentage
+                } else if (cellValue === 50) {
+                    probabilityClassName = "zeroprob"; // 0% probability
+                } else if (cellValue < 70) {
+                    probabilityClassName = "lowprob"; // Low probability
+                } else if (cellValue < 116) {
+                    probabilityClassName = "medprob"; // Medium probability
+                } else if (cellValue <= 149) {
+                    probabilityClassName = "highprob"; // High probability
+                } else if (cellValue === 150) {
+                    probabilityClassName = "mineprob"; // 100% mine probability
+                }
+            } else {
+                // Regular cell classes (0-10)
+                if (cellValue == 0 || cellValue == 9 || cellValue == 10) {
+                    content = null;
+                }
+                else {
+                    content = cellValue;
+                }
             }
         }
         

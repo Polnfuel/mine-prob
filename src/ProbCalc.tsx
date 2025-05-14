@@ -27,8 +27,8 @@ const CELL_COLORS = {
  * @param {number} imageWidth - Width of the image in pixels
  * @returns {Array<Array<Array<number>>>} 2D array of pixels with RGBA values
  */
-function convertPixelDataTo2dArray(pixelData, imageWidth) {
-    let resultArray = [];
+function convertPixelDataTo2dArray(pixelData : Uint8ClampedArray<ArrayBufferLike>, imageWidth : number) : number[][][] {
+    const resultArray = [];
     let currentRow = [];
     
     for (let i = 0; i < pixelData.length; i += 4) {
@@ -54,8 +54,8 @@ function convertPixelDataTo2dArray(pixelData, imageWidth) {
  * - 10: Flagged cell
  * - null: Unopened cell
  */
-function extractMinesweeperBoardFromImage(pixelArray, boardWidth, boardHeight) {
-    function doColorsMatch(pixel, colorReference) {
+function extractMinesweeperBoardFromImage(pixelArray : number[][][], boardWidth : number, boardHeight : number) : number[][] {
+    function doColorsMatch(pixel : number[], colorReference : number[]) {
         return pixel[0] === colorReference[0] && 
                pixel[1] === colorReference[1] && 
                pixel[2] === colorReference[2] && 
@@ -63,9 +63,9 @@ function extractMinesweeperBoardFromImage(pixelArray, boardWidth, boardHeight) {
     }
     
     // Initialize board with null values
-    let minesweeperBoard = Array.from(
+    let minesweeperBoard : number[][] = Array.from(
         {length: boardHeight}, 
-        () => Array.from({length: boardWidth}, () => null)
+        () => Array.from({length: boardWidth}, () => 0)
     );
     
     // Scan the image at cell positions
@@ -77,13 +77,13 @@ function extractMinesweeperBoardFromImage(pixelArray, boardWidth, boardHeight) {
             
             if (doColorsMatch(currentPixel, CELL_COLORS.OPENED)) {
                 if (doColorsMatch(pixelArray[j][i - 13], CELL_COLORS.CLOSED)) {
-                    minesweeperBoard[rowIndex][columnIndex] = 9; // Empty opened cell
+                    minesweeperBoard[rowIndex][columnIndex] = 9; // Closed cell
                 }
                 else if (doColorsMatch(pixelArray[j - 6][i], CELL_COLORS.SEVEN)) {
-                    minesweeperBoard[rowIndex][columnIndex] = 7; // Cell with 7 mines around
+                    minesweeperBoard[rowIndex][columnIndex] = 7;
                 }
                 else {
-                    minesweeperBoard[rowIndex][columnIndex] = 0; // Generic opened cell
+                    minesweeperBoard[rowIndex][columnIndex] = 0;
                 }
             }
             else if (doColorsMatch(currentPixel, CELL_COLORS.ONE)) {
@@ -120,8 +120,8 @@ function extractMinesweeperBoardFromImage(pixelArray, boardWidth, boardHeight) {
  * @param {Array<Array>} board2d - 2D board representation
  * @returns {Array} Flattened 1D array of board cells
  */
-function convertBoardTo1dArray(board2d) {
-    let flatBoard = [];
+function convertBoardTo1dArray(board2d : number[][]) : number[] {
+    const flatBoard = [];
     for (let row = 0; row < board2d.length; row++) {
         for (let col = 0; col < board2d[0].length; col++) {
             flatBoard.push(board2d[row][col]);
@@ -135,11 +135,11 @@ function convertBoardTo1dArray(board2d) {
  * @param {number} boardWidth - Width of the board
  * @returns {Array<Array>} 2D board representation
  */
-function convert1dArrayToBoard(flatBoard, boardWidth) {
+function convert1dArrayToBoard(flatBoard : number[], boardWidth : number) : number[][] {
     const boardHeight = flatBoard.length / boardWidth;
-    let board2d = Array.from(
+    const board2d : number[][] = Array.from(
         {length: boardHeight}, 
-        () => Array.from({length: boardWidth}, () => null)
+        () => Array.from({length: boardWidth}, () => 0)
     );
     
     for (let cellIndex = 0; cellIndex < flatBoard.length; cellIndex++) {
@@ -156,16 +156,16 @@ function convert1dArrayToBoard(flatBoard, boardWidth) {
  * Analyzes screenshots to extract minesweeper boards and calculates mine probabilities
  */
 export default function ProbCalc(){
-    const [boardWidth, setBoardWidth] = useState(30);
-    const [boardHeight, setBoardHeight] = useState(16);
-    const [board2d, setBoard2d] = useState(
+    const [boardWidth, setBoardWidth] = useState<number>(30);
+    const [boardHeight, setBoardHeight] = useState<number>(16);
+    const [board2d, setBoard2d] = useState<(number | null)[][]>(
         Array.from({length: 16}, () => Array.from({length: 30}, () => null))
     );
-    const [boardFlat, setBoardFlat] = useState(Array.from({length: 30 * 16}, () => null));
-    const [totalMines, setTotalMines] = useState("99");
-    const [screenshotUrl, setScreenshotUrl] = useState("");
-    const [calculationModule, setCalculationModule] = useState(null);
-    const [errorMessage, setErrorMessage] = useState(null);
+    const [boardFlat, setBoardFlat] = useState<number[]>(Array.from({length: 30 * 16}, () => 0));
+    const [totalMines, setTotalMines] = useState<string>("99");
+    const [screenshotUrl, setScreenshotUrl] = useState<string>("");
+    const [calculationModule, setCalculationModule] = useState<Awaited<ReturnType<typeof Calc>> | null>(null);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     // Load WASM calculation module on component mount
     useEffect(() => {
@@ -188,15 +188,20 @@ export default function ProbCalc(){
             
             // Convert blob to base64 image
             const reader = new FileReader();
-            const imageBase64 = await new Promise(resolve => {
-                reader.onload = e => resolve(e.target.result);
+            const imageBase64 = await new Promise<string>((resolve) => {
+                reader.onload = (e : ProgressEvent<FileReader>) => {
+                    if (!e.target || !e.target.result) {
+                        throw new Error("Failed to load the image");
+                    }
+                    resolve(e.target.result as string);
+                };
                 reader.readAsDataURL(blob);
             });
 
             // Load the image
             const img = new Image();
-            const imageLoaded = new Promise(resolve => {
-                img.onload = () => resolve();
+            const imageLoaded = new Promise<HTMLImageElement>((resolve) => {
+                img.onload = () => resolve(img);
             });
             img.src = imageBase64;
             await imageLoaded;
@@ -206,6 +211,9 @@ export default function ProbCalc(){
             canvas.width = img.width;
             canvas.height = img.height;
             const ctx = canvas.getContext("2d");
+            if (!ctx) {
+                throw new Error("Couldn't get canvas context");
+            }
             ctx.drawImage(img, 0, 0);
             const pixelData = ctx.getImageData(0, 0, img.width, img.height).data;
 
@@ -225,6 +233,7 @@ export default function ProbCalc(){
             setErrorMessage(null);
         } catch (error) {
             console.error(error);
+            setErrorMessage(error instanceof Error ? error.message : "Couldn't load image");
         }
     }
     
@@ -234,7 +243,9 @@ export default function ProbCalc(){
     function calculateProbabilities() {
         if (Number(totalMines) > 0 && 
             boardFlat[0] !== null && 
-            Number(totalMines) <= boardFlat.length) {
+            Number(totalMines) <= boardFlat.length &&
+            calculationModule
+        ) {
             try {
                 console.time("calculation-time");
                 
@@ -253,7 +264,7 @@ export default function ProbCalc(){
                 );
 
                 // Check for error code returned as single value
-                if (resultVector.size() == 1) throw new Error(resultVector.get(0));
+                if (resultVector.size() == 1) throw new Error(String(resultVector.get(0)));
 
                 // Extract calculated results
                 let calculatedBoard = [];
@@ -263,8 +274,10 @@ export default function ProbCalc(){
                 
                 console.timeEnd("calculation-time");
                 setBoard2d(convert1dArrayToBoard(calculatedBoard, boardWidth));
+                boardVector.delete();
+                resultVector.delete();
             }
-            catch (e) {
+            catch (e : any) {
                 if (e.message == 20) {
                     setErrorMessage("Too many tiles for calculation");
                 }

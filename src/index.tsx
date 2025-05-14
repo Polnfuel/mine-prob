@@ -2,7 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import ProbCalc from './ProbCalc';
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+const rootElement : any = document.getElementById('root');
+const root : ReactDOM.Root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ProbCalc />
