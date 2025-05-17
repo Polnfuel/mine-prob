@@ -52,7 +52,10 @@ export default function Grid({field} : Props) : JSX.Element {
             // Handle probability cells (50-151+)
             if (cellValue >= 50) {
                 baseClassName = 'cellprob';
-                content = cellValue - 50;
+                if (cellValue == 50 || cellValue == 150)
+                    content = null;
+                else
+                    content = cellValue - 50;
 
                 // Assign probability-specific class names based on value ranges
                 if (cellValue >= 151) {
@@ -71,7 +74,7 @@ export default function Grid({field} : Props) : JSX.Element {
                 }
             } else {
                 // Regular cell classes (0-10)
-                if (cellValue == 0 || cellValue == 9 || cellValue == 10) {
+                if (cellValue == 0 || cellValue == 9 || cellValue == 10 || cellValue == 11) {
                     content = null;
                 }
                 else {

@@ -174,7 +174,7 @@ uint8_t static countAdjacentFlaggedCells(uint16_t cellIndex) {
     uint8_t count = 0;
     vector<uint16_t> neighbors = getNeighborCells(cellIndex);
     for (uint16_t neighborIndex : neighbors) {
-        if (gameField[neighborIndex] == 10)  // 10 represents a flagged cell
+        if (gameField[neighborIndex] == 10 || gameField[neighborIndex] == 11)  // 10 represents a flagged cell
             count++;
     }
     return count;
@@ -268,14 +268,14 @@ void static collectFieldData() {
             // Unopened cell adjacent to at least one numbered cell
             unopenedCellsList.emplace_back(cellIndex);
         }
-        else if (gameField[cellIndex] != 9 && gameField[cellIndex] != 10 && countAdjacentUnopenedCells(cellIndex) > 0) {
+        else if (gameField[cellIndex] != 9 && gameField[cellIndex] != 10 && gameField[cellIndex] != 11 && countAdjacentUnopenedCells(cellIndex) > 0) {
             // Numbered cell adjacent to at least one unopened cell
             borderCellsList.emplace_back(
                 cellIndex, 
                 static_cast<uint8_t>(gameField[cellIndex] - countAdjacentFlaggedCells(cellIndex))
             );
         }
-        else if (gameField[cellIndex] == 10) {
+        else if (gameField[cellIndex] == 10 || gameField[cellIndex] == 11) {
             flagCount++;
         }
     }
@@ -817,6 +817,26 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
     }
 }
 
+vector<uint8_t> setTrivialFlags() {
+    vector<uint8_t> tempField(fieldSize);
+    for (int i = 0; i < fieldSize; i++) {
+        uint8_t unopened = countAdjacentUnopenedCells(i);
+        if (gameField[i] > 0 && unopened > 0 && unopened == gameField[i] - countAdjacentFlaggedCells(i)) {
+            vector<uint16_t> neis = getNeighborCells(i);
+            for (uint16_t nei : neis) {
+                if (gameField[nei] == 9)
+                    tempField[nei] = 11;
+                else
+                    tempField[nei] = gameField[nei];
+            }
+            tempField[i] = gameField[i];
+        }
+        else if (tempField[i] != 11)
+            tempField[i] = gameField[i];
+    }
+    return tempField;
+}
+
 /** 
  * The module entry point 
  * 
@@ -831,11 +851,17 @@ vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint1
     boardWidth = w;
     boardHeight = h;
     totalMines = m;
+    fieldSize = field.size();
     gameField.clear();
-    for (int i = 0; i < field.size(); i++) {
-        gameField.emplace_back(field[i]);
+    gameField.resize(fieldSize);
+    for (int i = 0; i < fieldSize; i++) {
+        gameField[i] = field[i];
     }
-    fieldSize = gameField.size();
+    vector<uint8_t> flaggedField = setTrivialFlags();
+    for (int i = 0; i < fieldSize; i++) {
+        gameField[i] = flaggedField[i];
+    }
+    
     borderCellsList.clear();
     unopenedCellsList.clear();
     unopenedCellsCount = 0;
