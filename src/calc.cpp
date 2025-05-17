@@ -760,6 +760,10 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
     uint8_t maxMineCount = prev(combinations.end())->first;
     uint16_t minMineCount = remainingMines - maxMineCount;
 
+    bool isMaximum = false;
+    if (maxMineCount == remainingMines) 
+        isMaximum = true;
+
     if (minMineCount >= 0) {
         vector<uint16_t> floatingTilesList;
         for (uint16_t cell = 0; cell < fieldSize; cell++) {
@@ -784,7 +788,7 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
             if (remainingMines - m == 0) rightFl = UINT16_MAX;
             else rightFl = min(remainingMines - m - 1, floatingTilesCount - remainingMines + m + 1);
             const uint16_t leftFl = floatingTilesCount - rightFl;
-            if (rightFl == 1) lenFl = rightFl - minMineCount;
+            if (rightFl == 1 && isMaximum) lenFl = rightFl - minMineCount;
             else lenFl = rightFl + 1 - minMineCount;
             const double weightFl = calculateBinomialCoefficient(leftFl, rightFl, lenFl);
 
@@ -793,10 +797,6 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
             weights.insert({ m, weight });
         }
 
-        bool isMaximum = false;
-        if (maxMineCount == remainingMines) 
-            isMaximum = true;
-        
         double floatingTilesProbability;
         if (isMaximum) 
             floatingTilesProbability = weightsFl / sumweights;
