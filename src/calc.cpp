@@ -780,11 +780,12 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
             const uint16_t len = right - minMineCount;
             const double weight = calculateBinomialCoefficient(left, right, len);
 
-            uint16_t rightFl;
+            uint16_t rightFl, lenFl;
             if (remainingMines - m == 0) rightFl = UINT16_MAX;
             else rightFl = min(remainingMines - m - 1, floatingTilesCount - remainingMines + m + 1);
             const uint16_t leftFl = floatingTilesCount - rightFl;
-            const uint16_t lenFl = rightFl + 1 - minMineCount;
+            if (rightFl == 1) lenFl = rightFl - minMineCount;
+            else lenFl = rightFl + 1 - minMineCount;
             const double weightFl = calculateBinomialCoefficient(leftFl, rightFl, lenFl);
 
             weightsFl += weightFl * arr[unopenedCellsCount];
