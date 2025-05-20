@@ -290,31 +290,38 @@ export default function ProbCalc(){
     }
     
     return (
-        <div className="probCalc">
-            <div className="pasteItems">
-                <div className="button" onClick={processScreenshotFromUrl}>Paste</div>
-                <input 
-                    value={screenshotUrl} 
-                    type="text" 
-                    placeholder="Paste screenshot URL" 
-                    onChange={(e) => setScreenshotUrl(e.target.value)}
-                />
+        <>
+            <h2>MINESWEEPER BOMB PROBABILITY CALCULATOR</h2>
+            <div className="probCalc">
+                <div className="pasteItems">
+                    <div className="button" onClick={processScreenshotFromUrl}>Paste</div>
+                    <input 
+                        value={screenshotUrl} 
+                        type="text" 
+                        placeholder="Paste screenshot URL" 
+                        onChange={(e) => setScreenshotUrl(e.target.value)}
+                    />
+                </div>
+                <div className="fieldItems">
+                    <div className="button" onClick={calculateProbabilities}>Probs</div>
+                    <input readOnly value={boardWidth} type="text"/>
+                    <input readOnly value={boardHeight} type="text"/>
+                    <input 
+                        value={totalMines}
+                        type="text"
+                        onChange={(e) => setTotalMines(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && calculateProbabilities()}
+                    />
+                </div>
+                {errorMessage && (
+                    <div id="warning">{errorMessage}</div>
+                )}
+                <div className="grid-outercont">
+                    <div className="grid-innercont">
+                        <Grid field={board2d}/>
+                    </div>
+                </div>
             </div>
-            <div className="fieldItems">
-                <div className="button" onClick={calculateProbabilities}>Probs</div>
-                <input readOnly value={boardWidth} type="text"/>
-                <input readOnly value={boardHeight} type="text"/>
-                <input 
-                    value={totalMines} 
-                    type="text" 
-                    onChange={(e) => setTotalMines(e.target.value)}
-                />
-            </div>
-            <span 
-                id="warning" 
-                style={{display: errorMessage ? "block" : "none"}}
-            >{errorMessage}</span>
-            <Grid field={board2d}/>
-        </div>
+        </>
     );
 }

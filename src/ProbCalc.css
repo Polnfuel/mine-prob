@@ -1,7 +1,21 @@
+body {
+    background-color: #343936;
+}
 .probCalc {
     display: flex;
     flex-direction: column;
     font-size: medium;
+    width: fit-content;
+}
+h2 {
+    margin: 10px 0 10px 80px;
+    font-size: 24px;
+    font-weight: 700;
+    background: linear-gradient(to left, #c1ff7f 0%, #72ffce 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-align: left;
 }
 .pasteItems, .fieldItems {
     margin-left: 40px;
@@ -11,9 +25,10 @@
 }
 .button {
     width: 60px;
-    background-color: rgb(92, 202, 114);
-    border: 3px solid rgb(14, 167, 0);
-    color: black;
+    background-color: #2b4c38;
+    border: 2px solid #21371f;
+    color: #449351;
+    font-weight: bolder;
     margin-right: 10px;
     border-radius: 5px;
     display: flex;
@@ -22,18 +37,42 @@
     user-select: none;
 }
 .pasteItems input {
+    background-color: transparent;
+    border: 2px solid #6a756e;
+    color: #cfcfcf;
     width: 170px;
     margin-right: 5px;
 }
 .fieldItems input {
+    background-color: transparent;
+    border: 2px solid #6a756e;
+    color: #cfcfcf;
     width: 50px;
     margin-right: 5px;
+    text-align: center;
 }
 .button:active {
-    border-color: white;
-    background-color: rgb(215, 255, 223);
+    background-color: #527559;
+    color: #343936;
 }
 #warning {
     margin-top: 10px;
-    margin-left: 20px;
+    margin-left: 60px;
+    color: #cfcfcf;
+    font-weight: 600;
+}
+.grid-outercont {
+    background-color: #c0c0c0;
+    border-left: 6px solid #ffffff;
+    border-top: 6px solid #ffffff;
+    border-bottom: 6px solid #808080;
+    border-right: 6px solid #808080;
+    margin: 20px;
+    padding: 10px;
+}
+.grid-innercont {
+    border-left: 6px solid #808080;
+    border-top: 6px solid #808080;
+    border-bottom: 6px solid #ffffff;
+    border-right: 6px solid #ffffff;
 }

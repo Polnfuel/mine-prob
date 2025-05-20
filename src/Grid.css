@@ -5,7 +5,6 @@
 .grid {
     display: grid;
     user-select: none;
-    margin: 20px;
     border-right: 1px solid #808080;
     border-bottom: 1px solid #808080;
 }
