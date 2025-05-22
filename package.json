@@ -1,6 +1,7 @@
 {
   "name": "mine-prob",
   "version": "1.0.0",
+  "type": "module",
   "private": true,
   "homepage": "https://polnfuel.github.io/mine-prob",
   "scripts": {
@@ -8,7 +9,8 @@
     "build": "vite build",
     "preview": "npx vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "lint": "eslint ."
   },
   "dependencies": {
     "gh-pages": "^6.3.0",

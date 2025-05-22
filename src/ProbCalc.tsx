@@ -63,7 +63,7 @@ function extractMinesweeperBoardFromImage(pixelArray : number[][][], boardWidth 
     }
     
     // Initialize board with null values
-    let minesweeperBoard : number[][] = Array.from(
+    const minesweeperBoard : number[][] = Array.from(
         {length: boardHeight}, 
         () => Array.from({length: boardWidth}, () => 0)
     );
@@ -267,7 +267,7 @@ export default function ProbCalc(){
                 if (resultVector.size() == 1) throw new Error(String(resultVector.get(0)));
 
                 // Extract calculated results
-                let calculatedBoard = [];
+                const calculatedBoard = [];
                 for (let i = 0; i < resultVector.size(); i++) {
                     calculatedBoard[i] = resultVector.get(i);
                 }
@@ -277,12 +277,14 @@ export default function ProbCalc(){
                 boardVector.delete();
                 resultVector.delete();
             }
-            catch (e : any) {
-                if (e.message == 20) {
-                    setErrorMessage("Too many tiles for calculation");
-                }
-                else if (e.message == 21) {
-                    setErrorMessage("There is nothing to calculate");
+            catch (e) {
+                if (e instanceof Error) {
+                    if (e.message == "20") {
+                        setErrorMessage("Too many tiles for calculation");
+                    }
+                    else if (e.message == "21") {
+                        setErrorMessage("There is nothing to calculate");
+                    }
                 }
                 console.timeEnd("calculation-time");
             }

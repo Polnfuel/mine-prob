@@ -1,5 +1,5 @@
 import './Grid.css';
-import {JSX, useEffect, useRef} from 'react';
+import {type JSX, useEffect, useRef} from 'react';
 
 interface Props {
     field: (number | null)[][];

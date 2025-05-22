@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <math.h>
 
 using namespace std;
 using namespace emscripten;
