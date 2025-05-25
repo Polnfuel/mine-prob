@@ -755,42 +755,43 @@ map<uint8_t, vector<uint32_t>> static generateCombinedProbabilities64(
 /**
  * Calculates probabiliy for every closed cell on field to be a mine
  * 
- * @param combinations Map of mine count to probability vector
+ * @param combinations Map of mine count to occurances vector
  */
 void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
-    uint8_t maxMineCount = prev(combinations.end())->first;
-    uint16_t minMineCount = remainingMines - maxMineCount;
-
-    bool isMaximum = false;
-    if (maxMineCount == remainingMines) 
-        isMaximum = true;
-
-    if (minMineCount >= 0) {
-        vector<uint16_t> floatingTilesList;
-        for (uint16_t cell = 0; cell < fieldSize; cell++) {
-            if (gameField[cell] == 9) {
-                if (countAdjacentNumberedCells(cell) == 0) {
-                    floatingTilesList.emplace_back(cell);
-                }
+    vector<uint16_t> floatingTilesList;
+    for (uint16_t cell = 0; cell < fieldSize; cell++) {
+        if (gameField[cell] == 9) {
+            if (countAdjacentNumberedCells(cell) == 0) {
+                floatingTilesList.emplace_back(cell);
             }
         }
-        const uint16_t floatingTilesCount = floatingTilesList.size();
+    }
+    const uint16_t floatingTilesCount = floatingTilesList.size();
 
-        //Map of combination length to its weight
+    if (remainingMines - combinations.begin()->first <= floatingTilesCount) {
+        uint16_t vUO = UINT16_MAX, vFL = UINT16_MAX;
+        for (const auto& [m, arr] : combinations) {
+            int16_t minUO = min(remainingMines - m, floatingTilesCount - (remainingMines - m));
+            if (vUO > minUO) 
+                vUO = minUO;
+            int16_t minFL = min(remainingMines - m - 1, floatingTilesCount - (remainingMines - m));
+            if (vFL > minFL && minFL >= 0) 
+                vFL = minFL;
+            else if (minFL < 0) vFL = 0;
+        }
+
         map<uint8_t, double> weights;
         double weightsFl = 0, sumweights = 0;
+
         for (const auto& [m, arr] : combinations) {
-            const uint16_t right = min(remainingMines - m, floatingTilesCount - remainingMines + m);
-            const uint16_t left = floatingTilesCount - right + 1;
-            const uint16_t len = right - minMineCount;
+            const uint16_t right = min(remainingMines - m, floatingTilesCount - (remainingMines - m));
+            const uint16_t len = right - vUO;
+            const uint16_t left = floatingTilesCount + 1 - right;
             const double weight = calculateBinomialCoefficient(left, right, len);
 
-            uint16_t rightFl, lenFl;
-            if (remainingMines - m == 0) rightFl = UINT16_MAX;
-            else rightFl = min(remainingMines - m - 1, floatingTilesCount - remainingMines + m + 1);
+            const uint16_t rightFl = min(remainingMines - m - 1, floatingTilesCount - (remainingMines - m));
+            const uint16_t lenFl = rightFl - vFL;
             const uint16_t leftFl = floatingTilesCount - rightFl;
-            if (rightFl == 1 && isMaximum) lenFl = rightFl - minMineCount;
-            else lenFl = rightFl + 1 - minMineCount;
             const double weightFl = calculateBinomialCoefficient(leftFl, rightFl, lenFl);
 
             weightsFl += weightFl * arr[unopenedCellsCount];
@@ -798,17 +799,20 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
             weights.insert({ m, weight });
         }
 
-        double floatingTilesProbability;
-        if (isMaximum) 
-            floatingTilesProbability = weightsFl / sumweights;
-        else 
-            floatingTilesProbability = (weightsFl / sumweights) * minMineCount / floatingTilesCount;
-        
+        double floatingTilesProbability = weightsFl / sumweights;
+        if (vUO > 0 || vFL > 0) {
+            if (vUO == vFL) {
+                floatingTilesProbability *= ((static_cast<double>(floatingTilesCount) - vFL) / floatingTilesCount);
+            }
+            else {
+                floatingTilesProbability *= (static_cast<double>(vUO) / floatingTilesCount);
+            }
+        }
         const uint8_t fTProbabilityUInt = round(floatingTilesProbability * 100) + 151;
         for (const auto tile : floatingTilesList) {
             gameField[tile] = fTProbabilityUInt;
         }
-
+        
         for (uint8_t cell = 0; cell < unopenedCellsCount; cell++) {
             double cellWeight = 0;
             for (const auto& entry : combinations) {
@@ -819,6 +823,11 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
     }
 }
 
+/**
+ * Sets trivial flags on game field
+ * 
+ * @return Field with trivial flags
+*/
 vector<uint8_t> setTrivialFlags() {
     vector<uint8_t> tempField(fieldSize);
     for (int i = 0; i < fieldSize; i++) {
@@ -898,6 +907,10 @@ vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint1
     }
     else if (unopenedCellsCount > 64) {
         combinations = generateCombinedProbabilities128(combinationsGroups, localMappingsGroups);
+    }
+
+    if (combinations.size() == 0) {
+        return { 22 };
     }
 
     calculateProbabilies(combinations);

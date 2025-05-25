@@ -246,6 +246,7 @@ export default function ProbCalc(){
             Number(totalMines) <= boardFlat.length &&
             calculationModule
         ) {
+            setErrorMessage(null);
             try {
                 console.time("calculation-time");
                 
@@ -284,6 +285,9 @@ export default function ProbCalc(){
                     }
                     else if (e.message == "21") {
                         setErrorMessage("There is nothing to calculate");
+                    }
+                    else if (e.message == "22") {
+                        setErrorMessage("Error with number of board mines. Make sure you entered it correctly");
                     }
                 }
                 console.timeEnd("calculation-time");
