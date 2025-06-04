@@ -306,6 +306,7 @@ export default function ProbCalc(){
                         type="text" 
                         placeholder="Paste screenshot URL" 
                         onChange={(e) => setScreenshotUrl(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && processScreenshotFromUrl()}
                     />
                 </div>
                 <div className="fieldItems">

@@ -9,6 +9,7 @@
 
 using namespace std;
 using namespace emscripten;
+typedef __uint128_t uint128_t;
 
 // Game field representation:
 // - Values 0-8 represent opened cells with adjacent mine count
@@ -148,6 +149,10 @@ double calculateBinomialCoefficient(uint16_t left, uint16_t right, uint16_t len)
     return result;
 }
 
+inline int static popcount128(uint128_t x) {
+    return __builtin_popcountll(static_cast<uint64_t>(x)) + __builtin_popcountll(static_cast<uint64_t>(x >> 64));
+}
+
 /**
  * Counts numbered cells adjacent to a given cell
  * 
@@ -204,12 +209,12 @@ uint8_t static countAdjacentUnopenedCells(uint16_t cellIndex) {
  * @param k Number of bits to set in each combination
  * @return Vector of all possible combinations
  */
-vector<uint64_t> generateBitCombinations(uint64_t fullMask, int k) {
+vector<uint128_t> generateBitCombinations128(uint128_t fullMask, int k) {
     vector<int> bitPositions;
 
     // Find positions of all set bits in the fullMask
-    for (int i = 0; i < 64; ++i) {
-        if (fullMask & (uint64_t(1) << i)) {
+    for (int i = 0; i < 128; ++i) {
+        if (fullMask & (uint128_t(1) << i)) {
             bitPositions.push_back(i);
         }
     }
@@ -217,17 +222,17 @@ vector<uint64_t> generateBitCombinations(uint64_t fullMask, int k) {
     int totalBits = bitPositions.size();
     if (k > totalBits) return {};
 
-    vector<uint64_t> result;
+    vector<uint128_t> result;
 
     // Use combinatorial algorithm to generate all combinations
     vector<bool> selection(totalBits);
     fill(selection.begin(), selection.begin() + k, true);
 
     do {
-        uint64_t mask = 0;
+        uint128_t mask = 0;
         for (int i = 0; i < totalBits; ++i) {
             if (selection[i]) {
-                mask |= (uint64_t(1) << bitPositions[i]);
+                mask |= (uint128_t(1) << bitPositions[i]);
             }
         }
         result.push_back(mask);
@@ -243,13 +248,13 @@ vector<uint64_t> generateBitCombinations(uint64_t fullMask, int k) {
  * @param borderNumbers Map of border cells to their adjacent mine counts
  * @return Map of border cells to possible bit mask combinations
  */
-map<uint16_t, vector<uint64_t>> createBorderCellCombinations(
-    map<uint16_t, uint64_t>& borderMasks, 
+map<uint16_t, vector<uint128_t>> createBorderCellCombinations128(
+    map<uint16_t, uint128_t>& borderMasks, 
     map<uint16_t, uint8_t>& borderNumbers
 ) {
-    map<uint16_t, vector<uint64_t>> maskCombinations;
+    map<uint16_t, vector<uint128_t>> maskCombinations;
     for (auto& borderEntry : borderMasks) {
-        vector<uint64_t> combinations = generateBitCombinations(
+        vector<uint128_t> combinations = generateBitCombinations128(
             borderEntry.second, 
             borderNumbers[borderEntry.first]
         );
@@ -404,38 +409,38 @@ void static identifyConnectedGroups(
  * @param borderMasks Map of border cells to their bit masks
  * @param combinations Output vector for valid combinations
  */
-void backtrackMineConfigurations(
-    uint16_t currentConstraint, 
-    uint64_t mask, 
-    map<uint16_t, vector<uint16_t>>& uoNeighbors, 
-    map<uint16_t, vector<uint16_t>>& bcNeighbors,
-    map<uint16_t, vector<uint64_t>>& borderCombinations, 
-    map<uint16_t, uint8_t>& borderNumbers, 
-    map<uint16_t, uint64_t>& borderMasks, 
-    vector<uint64_t>& combinations
+void backtrackMineConfigurations128(
+    const uint16_t currentConstraint, 
+    uint128_t mask, 
+    const map<uint16_t, vector<uint16_t>>& uoNeighbors, 
+    const map<uint16_t, vector<uint16_t>>& bcNeighbors,
+    const map<uint16_t, vector<uint128_t>>& borderCombinations, 
+    const map<uint16_t, uint8_t>& borderNumbers, 
+    const map<uint16_t, uint128_t>& borderMasks, 
+    vector<uint128_t>& combinations
 ) {
-    vector<uint16_t> neighbors = bcNeighbors[currentConstraint];
+    const vector<uint16_t> neighbors = bcNeighbors.at(currentConstraint);
     set<uint16_t> allConstraints;
     
     // Find all constraints that might be affected by the current choice
-    for (uint16_t neighbor : neighbors) {
-        vector<uint16_t> uoNeighbor = uoNeighbors[neighbor];
-        for (uint16_t uon : uoNeighbor) {
+    for (const uint16_t neighbor : neighbors) {
+        const vector<uint16_t> uoNeighbor = uoNeighbors.at(neighbor);
+        for (const uint16_t uon : uoNeighbor) {
             allConstraints.insert(uon);
         }
     }
     
     // Try each possible combination for the current constraint
-    for (uint64_t combo : borderCombinations[currentConstraint]) {
-        uint64_t newMask = mask | combo;
+    for (const uint128_t combo : borderCombinations.at(currentConstraint)) {
+        const uint128_t newMask = mask | combo;
         bool isValid = true;
         
         // Check if this combination is valid with all constraints
-        for (uint16_t constraint : allConstraints) {
-            uint64_t constraintMask = borderMasks[constraint];
-            uint8_t minesRequired = borderNumbers[constraint];
-            uint8_t totalCells = __builtin_popcountll(constraintMask);
-            uint8_t cellsNotInNewMask = __builtin_popcountll((newMask ^ constraintMask) & constraintMask);
+        for (const uint16_t constraint : allConstraints) {
+            const uint128_t constraintMask = borderMasks.at(constraint);
+            const uint8_t minesRequired = borderNumbers.at(constraint);
+            const uint8_t totalCells = popcount128(constraintMask);
+            const uint8_t cellsNotInNewMask = popcount128((newMask ^ constraintMask) & constraintMask);
             
             // If the number of remaining cells is less than needed mines, invalid
             if (cellsNotInNewMask < (totalCells - minesRequired)) {
@@ -448,15 +453,14 @@ void backtrackMineConfigurations(
             if (currentConstraint != lastConstraintCell) {
                 // Move to next constraint
                 uint16_t nextConstraint = (++borderMasks.find(currentConstraint))->first;
-                backtrackMineConfigurations(
+                backtrackMineConfigurations128(
                     nextConstraint, newMask, uoNeighbors, bcNeighbors, 
                     borderCombinations, borderNumbers, borderMasks, combinations
                 );
             }
-            else {
+            else if (popcount128(newMask) <= remainingMines) {
                 // We've reached the end of constraints, check if valid
-                if (__builtin_popcountll(newMask) <= remainingMines)
-                    combinations.emplace_back(newMask);
+                combinations.emplace_back(newMask);
             }
         }
     }
@@ -469,11 +473,11 @@ void backtrackMineConfigurations(
  * @param borderCells Vector of border cells with their mine counts
  * @return Pair of vectors: possible configurations and mapping to global indices
  */
-pair<vector<uint64_t>, vector<uint8_t>> findPossibleConfigurations(
-    vector<uint16_t> unopenedCells, 
-    vector<pair<uint16_t, uint8_t>> borderCells
+pair<vector<uint128_t>, vector<uint8_t>> findPossibleConfigurations128(
+    const vector<uint16_t> unopenedCells, 
+    const vector<pair<uint16_t, uint8_t>> borderCells
 ) {
-    vector<uint64_t> combinations;
+    vector<uint128_t> combinations;
     vector<uint8_t> localToGlobalMap(unopenedCells.size());
     map<uint16_t, uint8_t> cellToBitPosition;
     
@@ -483,25 +487,25 @@ pair<vector<uint64_t>, vector<uint8_t>> findPossibleConfigurations(
         cellToBitPosition.insert({ unopenedCells[i], i });
     }
     
-    vector<pair<uint64_t, uint8_t>> borderInfo;
-    set<uint64_t> seenMasks;
-    set<uint16_t> borderCellSet;
+    vector<pair<uint128_t, uint8_t>> borderInfo;
+    set<uint128_t> seenMasks;
+    set<uint128_t> borderCellSet;
     vector<uint16_t> borderCellVector;
     set<uint16_t> unopenedCellSet;
     map<uint16_t, vector<uint16_t>> unopenedToNeighbors;
     map<uint16_t, vector<uint16_t>> borderToNeighbors;
     map<uint16_t, uint8_t> borderToNumbers;
-    map<uint16_t, uint64_t> borderToMasks;
+    map<uint16_t, uint128_t> borderToMasks;
     
     // Create masks for each border cell
-    for (auto& [cellIndex, mineCount] : borderCells) {
-        vector<uint16_t> neighbors = getNeighborCells(cellIndex);
-        uint64_t mask = 0;
+    for (const auto& [cellIndex, mineCount] : borderCells) {
+        const vector<uint16_t> neighbors = getNeighborCells(cellIndex);
+        uint128_t mask = 0;
         
         for (const uint16_t neighborIndex : neighbors) {
             const auto it = cellToBitPosition.find(neighborIndex);
             if (it != cellToBitPosition.end()) {
-                mask |= 1ull << it->second;
+                mask |= uint128_t(1) << it->second;
             }
         }
         
@@ -516,23 +520,23 @@ pair<vector<uint64_t>, vector<uint8_t>> findPossibleConfigurations(
     }
     
     // Build neighbor relationships
-    for (uint16_t cell : unopenedCells) {
+    for (const uint16_t cell : unopenedCells) {
         unopenedCellSet.insert(cell);
         unopenedToNeighbors.insert({ cell, vector<uint16_t>() });
-        vector<uint16_t> neighbors = getNeighborCells(cell);
+        const vector<uint16_t> neighbors = getNeighborCells(cell);
         
-        for (uint16_t neighbor : neighbors) {
+        for (const uint16_t neighbor : neighbors) {
             if (borderCellSet.count(neighbor) > 0) {
                 unopenedToNeighbors[cell].push_back(neighbor);
             }
         }
     }
     
-    for (uint16_t cell : borderCellSet) {
+    for (const uint16_t cell : borderCellSet) {
         borderToNeighbors.insert({ cell, vector<uint16_t>() });
-        vector<uint16_t> neighbors = getNeighborCells(cell);
+        const vector<uint16_t> neighbors = getNeighborCells(cell);
         
-        for (uint16_t neighbor : neighbors) {
+        for (const uint16_t neighbor : neighbors) {
             if (unopenedCellSet.count(neighbor) > 0) {
                 borderToNeighbors[cell].push_back(neighbor);
             }
@@ -540,12 +544,12 @@ pair<vector<uint64_t>, vector<uint8_t>> findPossibleConfigurations(
     }
     
     // Generate possible combinations for each border cell
-    map<uint16_t, vector<uint64_t>> borderCombinations = createBorderCellCombinations(borderToMasks, borderToNumbers);
+    const map<uint16_t, vector<uint128_t>> borderCombinations = createBorderCellCombinations128(borderToMasks, borderToNumbers);
     
     // If there are border cells, run backtracking
     if (!borderCellSet.empty()) {
         lastConstraintCell = *borderCellSet.rbegin();
-        backtrackMineConfigurations(
+        backtrackMineConfigurations128(
             *borderCellSet.begin(), 0, 
             unopenedToNeighbors, borderToNeighbors, 
             borderCombinations, borderToNumbers, borderToMasks, 
@@ -556,208 +560,100 @@ pair<vector<uint64_t>, vector<uint8_t>> findPossibleConfigurations(
     return {combinations, localToGlobalMap};
 }
 
-/**
- * Backtracking algorithm for 128-bit masks (for large fields)
- * 
- * @param index Current group index
- * @param currentMask Current global mine configuration mask
- * @param usedMines Number of mines used so far
- * @param globalGroups Map of global mask to count for each group
- * @param result Output vector for probability calculations
- * @param numToIndex Map of mine count to index in result
- */
-void static backtrack128(
-    const uint8_t index, 
-    const __uint128_t currentMask, 
-    const uint8_t usedMines,
-    vector<map<__uint128_t, uint8_t>>& globalGroups,
-    vector<vector<uint32_t>>& result,
-    map<uint8_t, uint8_t>& numToIndex
+void static backtrackGenCombs(
+    const int index, 
+    const uint16_t usedMines, 
+    const vector<map<uint8_t, vector<uint64_t>>>& groupMaps,
+    vector<uint16_t>& counts,
+    vector<vector<uint64_t>>& globalResult,
+    vector<uint8_t>& globalNumToIndex
 ) {
-    // Stop if we've used too many mines
     if (usedMines > remainingMines) return;
 
-    // We've processed all groups, add result
-    if (index == globalGroups.size()) {
-        auto [it, inserted] = numToIndex.try_emplace(usedMines, result.size());
-        if (inserted) {
-            result.emplace_back(vector<uint32_t>(unopenedCellsCount + 1));
+    if (index == groupMaps.size()) {
+        globalResult.emplace_back(vector<uint64_t>(unopenedCellsCount + 1));
+        globalNumToIndex.emplace_back(usedMines);
+        uint64_t mult = 1;
+        for (int group = 0; group < groupMaps.size(); group++) {
+            mult *= groupMaps[group].at(static_cast<uint8_t>(counts[group]))[unopenedCellsCount];
         }
-        
-        // Update probabilities for each cell
-        for (uint8_t i = 0; i < unopenedCellsCount; i++){
-            if ((currentMask >> i) & (__uint128_t)1){
-                result[numToIndex[usedMines]][i]++;
+        for (int group = 0; group < groupMaps.size(); group++) {
+            const uint64_t count = groupMaps[group].at(static_cast<uint8_t>(counts[group]))[unopenedCellsCount];
+
+            for (uint8_t cell = 0; cell < unopenedCellsCount; cell++) {
+                globalResult.back()[cell] += (groupMaps[group].at(static_cast<uint8_t>(counts[group]))[cell] * (mult / count));
             }
         }
-        result[numToIndex[usedMines]][unopenedCellsCount]++;
+        globalResult.back()[unopenedCellsCount] = mult;
         return;
     }
 
-    // Try each mask from the current group
-    for (const auto& [mask, count] : globalGroups[index]) {
-        backtrack128(
-            index + 1, 
-            currentMask | mask, 
-            usedMines + count, 
-            globalGroups, 
-            result, 
-            numToIndex
+    for (const auto& [cnt, array] : groupMaps[index]) {
+        counts[index] = cnt;
+        backtrackGenCombs(
+            index + 1,
+            usedMines + cnt,
+            groupMaps,
+            counts,
+            globalResult,
+            globalNumToIndex
         );
     }
 }
 
-/**
- * Generates combined probabilities for large fields (>64 cells)
- * 
- * @param maskGroups Vector of configuration masks for each group
- * @param localMappings Vector of local to global index mappings
- * @return Map of mine count to probability vector
- */
-map<uint8_t, vector<uint32_t>> static generateCombinedProbabilities128(
-    const vector<vector<uint64_t>>& maskGroups, 
+map<uint8_t, vector<uint64_t>> generateCombinations(
+    const vector<vector<uint128_t>>& maskGroups,
     const vector<vector<uint8_t>>& localMappings
 ) {
-    vector<vector<uint32_t>> result;
-    map<uint8_t, uint8_t> numToIndex;
-    const uint8_t groupCount = maskGroups.size();
-
-    // Convert local masks to global masks
-    vector<map<__uint128_t, uint8_t>> globalGroups(groupCount);
-    for (uint8_t i = 0; i < groupCount; i++) {
+    vector<map<uint8_t, vector<uint64_t>>> groupMaps(maskGroups.size());
+    for (int i = 0; i < maskGroups.size(); i++) {
+        vector<vector<uint64_t>> result;
+        map<uint8_t, uint8_t> numToIndex;
         const vector<uint8_t> localMapping = localMappings[i];
-        const vector<uint64_t> group = maskGroups[i];
-        
-        for (uint64_t localMask : group) {
-            __uint128_t globalMask = 0;
-            uint8_t setCount = 0;
-            
-            // Convert each bit in the local mask to its global position
+        const vector<uint128_t> group = maskGroups[i];
+        for (const uint128_t localMask : group) {
+            const uint8_t setCount = popcount128(localMask);
+            const auto [it, inserted] = numToIndex.try_emplace(setCount, result.size());
+            if (inserted) {
+                result.emplace_back(vector<uint64_t>(unopenedCellsCount + 1));
+            }
+
             for (uint8_t j = 0; j < localMapping.size(); j++) {
                 if ((localMask >> j) & 1) {
-                    globalMask |= ((__uint128_t)1 << localMapping[j]);
-                    setCount++;
+                    result[numToIndex[setCount]][localMapping[j]]++;
                 }
             }
-            globalGroups[i].insert({ globalMask, setCount });
+            result[numToIndex[setCount]][unopenedCellsCount]++;
         }
-    }
-    
-    // Run backtracking to combine groups
-    backtrack128(0, 0, 0, globalGroups, result, numToIndex);
-    
-    // Convert result to map by mine count
-    map<uint8_t, vector<uint32_t>> combinations;
-    for (const auto& [num, index] : numToIndex) {
-        combinations.insert({ num, result[index] });
-    }
-    return combinations;
-}
-
-/**
- * Backtracking algorithm for 64-bit masks (for small/medium fields)
- * 
- * @param index Current group index
- * @param currentMask Current global mine configuration mask
- * @param usedMines Number of mines used so far
- * @param globalGroups Map of global mask to count for each group
- * @param result Output vector for probability calculations
- * @param numToIndex Map of mine count to index in result
- */
-void static backtrack64(
-    const uint8_t index, 
-    const uint64_t currentMask, 
-    const uint8_t usedMines,
-    vector<map<uint64_t, uint8_t>>& globalGroups,
-    vector<vector<uint32_t>>& result,
-    map<uint8_t, uint8_t>& numToIndex
-) {
-    // Stop if we've used too many mines
-    if (usedMines > remainingMines) return;
-
-    // We've processed all groups, add result
-    if (index == globalGroups.size()) {
-        auto [it, inserted] = numToIndex.try_emplace(usedMines, result.size());
-        if (inserted) {
-            result.emplace_back(vector<uint32_t>(unopenedCellsCount + 1));
+        map<uint8_t, vector<uint64_t>> combs;
+        for (const auto& [num, index] : numToIndex) {
+            combs.insert({num, result[index]});
         }
-        
-        // Update probabilities for each cell
-        for (uint8_t i = 0; i < unopenedCellsCount; i++) {
-            if ((currentMask >> i) & 1ull) {
-                result[numToIndex[usedMines]][i]++;
+        groupMaps[i] = combs;
+    }
+    vector<uint16_t> counts(groupMaps.size());
+    vector<vector<uint64_t>> globalResult;
+    vector<uint8_t> globalNumToIndex;
+    backtrackGenCombs(0, 0, groupMaps, counts, globalResult, globalNumToIndex);
+
+    map<uint8_t, vector<uint64_t>> globalRes;
+    for (int ind = 0; ind < globalNumToIndex.size(); ind++) {
+        const auto [it, inserted] = globalRes.try_emplace(globalNumToIndex[ind], globalResult[ind]);
+        if (!inserted) {
+            for (uint8_t cell = 0; cell < unopenedCellsCount + 1; cell++) {
+                globalRes[globalNumToIndex[ind]][cell] += globalResult[ind][cell];
             }
         }
-        result[numToIndex[usedMines]][unopenedCellsCount]++;
-        return;
     }
-
-    // Try each mask from the current group
-    for (const auto& [mask, count] : globalGroups[index]) {
-        backtrack64(
-            index + 1, 
-            currentMask | mask, 
-            usedMines + count, 
-            globalGroups, 
-            result, 
-            numToIndex
-        );
-    }
-}
-
-/**
- * Generates combined probabilities for smaller fields (<= 64 cells)
- * 
- * @param maskGroups Vector of configuration masks for each group
- * @param localMappings Vector of local to global index mappings
- * @return Map of mine count to probability vector
- */
-map<uint8_t, vector<uint32_t>> static generateCombinedProbabilities64(
-    const vector<vector<uint64_t>>& maskGroups, 
-    const vector<vector<uint8_t>>& localMappings
-) {
-    vector<vector<uint32_t>> result;
-    map<uint8_t, uint8_t> numToIndex;
-    const uint8_t groupCount = maskGroups.size();
-
-    // Convert local masks to global masks
-    vector<map<uint64_t, uint8_t>> globalGroups(groupCount);
-    for (uint8_t i = 0; i < groupCount; i++) {
-        const vector<uint8_t> localMapping = localMappings[i];
-        const vector<uint64_t> group = maskGroups[i];
-
-        for (uint64_t localMask : group) {
-            uint64_t globalMask = 0;
-            uint8_t setCount = 0;
-
-            //Convert each bit in the local mask to its global position
-            for (uint8_t j = 0; j < localMapping.size(); j++) {
-                if ((localMask >> j) & 1) {
-                    globalMask |= (1ull << localMapping[j]);
-                    setCount++;
-                }
-            }
-            globalGroups[i].insert({ globalMask, setCount });
-        }
-    }
-
-    //Run backtracking to combine groups
-    backtrack64(0, 0, 0, globalGroups, result, numToIndex);
-
-    //Convert result to map by mine count
-    map<uint8_t, vector<uint32_t>> combinations;
-    for (const auto& [num, index] : numToIndex) {
-        combinations.insert({ num, result[index] });
-    }
-    return combinations;
-}
+    return globalRes;
+} 
 
 /**
  * Calculates probabiliy for every closed cell on field to be a mine
  * 
  * @param combinations Map of mine count to occurances vector
  */
-void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
+void calculateProbabilies(const map<uint8_t, vector<uint64_t>>& combinations) {
     vector<uint16_t> floatingTilesList;
     for (uint16_t cell = 0; cell < fieldSize; cell++) {
         if (gameField[cell] == 9) {
@@ -826,9 +722,8 @@ void calculateProbabilies(map<uint8_t, vector<uint32_t>>& combinations) {
 /**
  * Sets trivial flags on game field
  * 
- * @return Field with trivial flags
 */
-vector<uint8_t> setTrivialFlags() {
+void setTrivialFlags() {
     vector<uint8_t> tempField(fieldSize);
     for (int i = 0; i < fieldSize; i++) {
         uint8_t unopened = countAdjacentUnopenedCells(i);
@@ -845,7 +740,9 @@ vector<uint8_t> setTrivialFlags() {
         else if (tempField[i] != 11)
             tempField[i] = gameField[i];
     }
-    return tempField;
+    for (int i = 0; i < fieldSize; i++) {
+        gameField[i] = tempField[i];
+    }
 }
 
 /** 
@@ -858,7 +755,6 @@ vector<uint8_t> setTrivialFlags() {
  * @return Vector of game field with calculated probabilities
 */
 vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint16_t m) {
-    //Initializing global values
     boardWidth = w;
     boardHeight = h;
     totalMines = m;
@@ -868,19 +764,14 @@ vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint1
     for (int i = 0; i < fieldSize; i++) {
         gameField[i] = field[i];
     }
-    vector<uint8_t> flaggedField = setTrivialFlags();
-    for (int i = 0; i < fieldSize; i++) {
-        gameField[i] = flaggedField[i];
-    }
+    
+    setTrivialFlags();
     
     borderCellsList.clear();
     unopenedCellsList.clear();
     unopenedCellsCount = 0;
 
     collectFieldData();
-    if (unopenedCellsCount > 128) {
-        return { 20 };
-    }
 
     vector<pair<vector<uint16_t>, vector<pair<uint16_t, uint8_t>>>> groups;
     identifyConnectedGroups(groups);
@@ -889,25 +780,20 @@ vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint1
         return { 21 };
     }
 
-    vector<vector<uint64_t>> combinationsGroups;
+    vector<vector<uint128_t>> combinationsGroups;
     vector<vector<uint8_t>> localMappingsGroups;
+
     for (uint8_t group = 0; group < groups.size(); group++) {
         auto [unopenedCells, borderCells] = groups[group];
-        if (unopenedCells.size() > 64) {
+        if (unopenedCells.size() > 128) {
             return { 20 };
         }
-        const auto [groupCombinations, groupMapping] = findPossibleConfigurations(unopenedCells, borderCells);
+        const auto [groupCombinations, groupMapping] = findPossibleConfigurations128(unopenedCells, borderCells);
         combinationsGroups.emplace_back(groupCombinations);
         localMappingsGroups.emplace_back(groupMapping);
     }
 
-    map<uint8_t, vector<uint32_t>> combinations;
-    if (unopenedCellsCount <= 64) {
-        combinations = generateCombinedProbabilities64(combinationsGroups, localMappingsGroups);
-    }
-    else if (unopenedCellsCount > 64) {
-        combinations = generateCombinedProbabilities128(combinationsGroups, localMappingsGroups);
-    }
+    const map<uint8_t, vector<uint64_t>> combinations = generateCombinations(combinationsGroups, localMappingsGroups);
 
     if (combinations.size() == 0) {
         return { 22 };
