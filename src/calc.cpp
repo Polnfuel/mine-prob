@@ -1,142 +1,110 @@
-#include <emscripten/bind.h>
 #include <cstdint>
-#include <vector>
+#include <cmath>
 #include <algorithm>
+#include <vector>
 #include <map>
 #include <set>
 #include <utility>
-#include <math.h>
+#include <emscripten/bind.h>
 
 using namespace std;
-using namespace emscripten;
+
 typedef __uint128_t uint128_t;
 
-// Game field representation:
-// - Values 0-8 represent opened cells with adjacent mine count
-// - 9 represents an unopened cell
-// - 10 represents a flagged cell
-
 // Global variables
-vector<uint8_t> gameField;                       // Game field state
-uint16_t fieldSize;                              // Total number of cells in the field
-uint8_t boardWidth, boardHeight;                 // Dimensions of the game board
-uint16_t remainingMines;                         // Number of mines not yet flagged
-uint16_t totalMines;                             // Total number of mines in the game
-uint16_t lastConstraintCell;                     // Last cell in the border cell list (for backtracking)
-vector<uint16_t> unopenedCellsList;              // List of all unopened cells adjacent to numbered cells
-uint8_t unopenedCellsCount;                      // Count of unopened cells in the list
-vector<pair<uint16_t, uint8_t>> borderCellsList; // List of numbered cells with adjacent unopened cells
+vector<uint8_t> game_field;                     // Game field state
+uint16_t field_size;                            // Total number of cells in the field
+uint8_t field_width, field_height;              // Dimensions of the game board
+uint16_t remain_mines;                          // Number of mines not yet flagged
+uint16_t total_mines;                           // Total number of mines in the game
+uint16_t last_number;                           // Last cell in the number cell list (for backtracking)
+vector<uint16_t> edge_cells_list;               // List of all closed cells adjacent to numbered cells
+uint8_t edge_cells_count;                       // Count of edge cells in the list
+vector<pair<uint16_t, uint8_t>> num_cells_list; // List of numbered cells with adjacent closed cells
 
-/**
- * Gets the neighboring cells of a given cell
- * 
- * @param cellIndex The index of the cell to get neighbors for
- * @return A vector containing the indices of neighboring cells
- */
-vector<uint16_t> getNeighborCells(uint16_t cellIndex) {
-    uint8_t row = cellIndex / boardWidth;
-    uint8_t col = cellIndex % boardWidth;
-    vector<uint16_t> neighbors;
+//Returns neighbor cells indeces of a given cell index
+vector<uint16_t> static get_neighbor_cells(uint16_t cell) {
+    const uint8_t row = cell / field_width;
+    const uint8_t col = cell % field_width;
     
-    // Handle different cases based on cell position (corner, edge, or interior)
     if (row == 0) {
-        // Top row
         if (col == 0) {
-            // Top-left corner
-            neighbors = { 
-                static_cast<uint16_t>(1), 
-                static_cast<uint16_t>(boardWidth), 
-                static_cast<uint16_t>(boardWidth + 1) 
+            return { 
+                1, 
+                field_width, 
+                uint16_t(field_width + 1) 
             };
-        } else if (col == boardWidth - 1) {
-            // Top-right corner
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex - 1 + boardWidth), 
-                static_cast<uint16_t>(cellIndex + boardWidth) 
+        } else if (col == field_width - 1) {
+            return { 
+                uint16_t(cell - 1), 
+                uint16_t(cell - 1 + field_width), 
+                uint16_t(cell + field_width) 
             };
         } else {
-            // Top edge (not corner)
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex + 1), 
-                static_cast<uint16_t>(cellIndex - 1 + boardWidth), 
-                static_cast<uint16_t>(cellIndex + boardWidth), 
-                static_cast<uint16_t>(cellIndex + 1 + boardWidth) 
+            return { 
+                uint16_t(cell - 1), 
+                uint16_t(cell + 1), 
+                uint16_t(cell - 1 + field_width), 
+                uint16_t(cell + field_width), 
+                uint16_t(cell + 1 + field_width) 
             };
         }
-    } else if (row == boardHeight - 1) {
-        // Bottom row
+    } else if (row == field_height - 1) {
         if (col == 0) {
-            // Bottom-left corner
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - boardWidth), 
-                static_cast<uint16_t>(cellIndex - boardWidth + 1), 
-                static_cast<uint16_t>(cellIndex + 1) 
+            return { 
+                uint16_t(cell - field_width), 
+                uint16_t(cell - field_width + 1), 
+                uint16_t(cell + 1) 
             };
-        } else if (col == boardWidth - 1) {
-            // Bottom-right corner
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth) 
+        } else if (col == field_width - 1) {
+            return { 
+                uint16_t(cell - 1), 
+                uint16_t(cell - field_width - 1), 
+                uint16_t(cell - field_width) 
             };
         } else {
-            // Bottom edge (not corner)
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex + 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth + 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth) 
+            return { 
+                uint16_t(cell - 1), 
+                uint16_t(cell + 1), 
+                uint16_t(cell - field_width + 1), 
+                uint16_t(cell - field_width - 1), 
+                uint16_t(cell - field_width) 
             };
         }
     } else {
-        // Middle rows
         if (col == 0) {
-            // Left edge
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - boardWidth), 
-                static_cast<uint16_t>(cellIndex - boardWidth + 1), 
-                static_cast<uint16_t>(cellIndex + 1), 
-                static_cast<uint16_t>(cellIndex + boardWidth), 
-                static_cast<uint16_t>(cellIndex + boardWidth + 1) 
+            return { 
+                uint16_t(cell - field_width), 
+                uint16_t(cell - field_width + 1), 
+                uint16_t(cell + 1), 
+                uint16_t(cell + field_width), 
+                uint16_t(cell + field_width + 1) 
             };
-        } else if (col == boardWidth - 1) {
-            // Right edge
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth), 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex + boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex + boardWidth) 
+        } else if (col == field_width - 1) {
+            return { 
+                uint16_t(cell - field_width - 1), 
+                uint16_t(cell - field_width), 
+                uint16_t(cell - 1), 
+                uint16_t(cell + field_width - 1), 
+                uint16_t(cell + field_width) 
             };
         } else {
-            // Interior cell (not on any edge)
-            neighbors = { 
-                static_cast<uint16_t>(cellIndex - boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex - boardWidth), 
-                static_cast<uint16_t>(cellIndex - boardWidth + 1), 
-                static_cast<uint16_t>(cellIndex - 1), 
-                static_cast<uint16_t>(cellIndex + 1), 
-                static_cast<uint16_t>(cellIndex + boardWidth - 1), 
-                static_cast<uint16_t>(cellIndex + boardWidth), 
-                static_cast<uint16_t>(cellIndex + boardWidth + 1) 
+            return { 
+                uint16_t(cell - field_width - 1), 
+                uint16_t(cell - field_width), 
+                uint16_t(cell - field_width + 1), 
+                uint16_t(cell - 1), 
+                uint16_t(cell + 1), 
+                uint16_t(cell + field_width - 1), 
+                uint16_t(cell + field_width), 
+                uint16_t(cell + field_width + 1) 
             };
         }
     }
-    return neighbors;
 }
 
-/**
- * Calculates binomial coefficient for probability calculation
- * 
- * @param left Left operand
- * @param right Right operand
- * @param len Length parameter
- * @return Binomial coefficient result
- */
-double calculateBinomialCoefficient(uint16_t left, uint16_t right, uint16_t len) {
+//Calculates weight
+double static calc_weight(uint16_t left, uint16_t right, uint16_t len) {
     double result = 1;
     if (right == UINT16_MAX) {
         return 0;
@@ -149,664 +117,571 @@ double calculateBinomialCoefficient(uint16_t left, uint16_t right, uint16_t len)
     return result;
 }
 
+//Popcount for uint128_t type
 inline int static popcount128(uint128_t x) {
     return __builtin_popcountll(static_cast<uint64_t>(x)) + __builtin_popcountll(static_cast<uint64_t>(x >> 64));
 }
 
-/**
- * Counts numbered cells adjacent to a given cell
- * 
- * @param cellIndex The index of the cell to check around
- * @return Number of adjacent numbered cells
- */
-uint8_t static countAdjacentNumberedCells(uint16_t cellIndex) {
+//Counts cells with number adjacent to a given cell
+uint8_t static count_number_cells(uint16_t cell_index) {
     uint8_t count = 0;
-    vector<uint16_t> neighbors = getNeighborCells(cellIndex);
-    for (uint16_t neighborIndex : neighbors) {
-        // If neighbor is a numbered cell (0-8)
-        if (gameField[neighborIndex] > 0 && gameField[neighborIndex] < 9)
+    const vector<uint16_t> neighbors = get_neighbor_cells(cell_index);
+    for (const uint16_t neighbor_index : neighbors) {
+        if (game_field[neighbor_index] > 0 && game_field[neighbor_index] < 9)
             count++;
     }
     return count;
 }
 
-/**
- * Counts flagged cells adjacent to a given cell
- * 
- * @param cellIndex The index of the cell to check around
- * @return Number of adjacent flagged cells
- */
-uint8_t static countAdjacentFlaggedCells(uint16_t cellIndex) {
+//Counts cells with flag adjacent to a given cell
+uint8_t static count_flagged_cells(uint16_t cell_index) {
     uint8_t count = 0;
-    vector<uint16_t> neighbors = getNeighborCells(cellIndex);
-    for (uint16_t neighborIndex : neighbors) {
-        if (gameField[neighborIndex] == 10 || gameField[neighborIndex] == 11)  // 10 represents a flagged cell
+    const vector<uint16_t> neighbors = get_neighbor_cells(cell_index);
+    for (const uint16_t neighbor_index : neighbors) {
+        if (game_field[neighbor_index] == 10 || game_field[neighbor_index] == 11)
             count++;
     }
     return count;
 }
 
-/**
- * Counts unopened cells adjacent to a given cell
- * 
- * @param cellIndex The index of the cell to check around
- * @return Number of adjacent unopened cells
- */
-uint8_t static countAdjacentUnopenedCells(uint16_t cellIndex) {
+//Counts closed cells adjacent to a given cell
+uint8_t static count_closed_cells(uint16_t cell_index) {
     uint8_t count = 0;
-    vector<uint16_t> neighbors = getNeighborCells(cellIndex);
-    for (uint16_t neighborIndex : neighbors) {
-        if (gameField[neighborIndex] == 9)  // 9 represents an unopened cell
+    const vector<uint16_t> neighbors = get_neighbor_cells(cell_index);
+    for (const uint16_t neighbor_index : neighbors) {
+        if (game_field[neighbor_index] == 9)
             count++;
     }
     return count;
 }
 
-/**
- * Generates all possible bit mask combinations with k bits set
- * 
- * @param fullMask The full bit mask to choose from
- * @param k Number of bits to set in each combination
- * @return Vector of all possible combinations
- */
-vector<uint128_t> generateBitCombinations128(uint128_t fullMask, int k) {
-    vector<int> bitPositions;
+//Generates all possible bit mask combinations with k bits set for a given mask
+vector<uint128_t> static bit_combinations(uint128_t full_mask, uint8_t k) {
+    vector<uint8_t> bit_positions;
 
-    // Find positions of all set bits in the fullMask
-    for (int i = 0; i < 128; ++i) {
-        if (fullMask & (uint128_t(1) << i)) {
-            bitPositions.push_back(i);
+    // Find positions of all set bits in the full_mask
+    for (uint8_t i = 0; i < 128; i++) {
+        if (full_mask & (uint128_t(1) << i)) {
+            bit_positions.emplace_back(i);
         }
     }
 
-    int totalBits = bitPositions.size();
-    if (k > totalBits) return {};
+    const uint8_t total_bits = bit_positions.size();
+    if (k > total_bits) return {};
 
     vector<uint128_t> result;
 
     // Use combinatorial algorithm to generate all combinations
-    vector<bool> selection(totalBits);
+    vector<bool> selection(total_bits);
     fill(selection.begin(), selection.begin() + k, true);
 
     do {
         uint128_t mask = 0;
-        for (int i = 0; i < totalBits; ++i) {
+        for (uint8_t i = 0; i < total_bits; i++) {
             if (selection[i]) {
-                mask |= (uint128_t(1) << bitPositions[i]);
+                mask |= (uint128_t(1) << bit_positions[i]);
             }
         }
-        result.push_back(mask);
+        result.emplace_back(mask);
     } while (prev_permutation(selection.begin(), selection.end()));
 
     return result;
 }
 
-/**
- * Creates all possible mask combinations for each border cell
- * 
- * @param borderMasks Map of border cells to their bit masks
- * @param borderNumbers Map of border cells to their adjacent mine counts
- * @return Map of border cells to possible bit mask combinations
- */
-map<uint16_t, vector<uint128_t>> createBorderCellCombinations128(
-    map<uint16_t, uint128_t>& borderMasks, 
-    map<uint16_t, uint8_t>& borderNumbers
+//Generates possible combinations for each number cell
+void static num_cell_bit_combinations(
+    const map<uint16_t, uint128_t>& num_masks, 
+    const map<uint16_t, uint8_t>& num_mines,
+    map<uint16_t, vector<uint128_t>>& num_combinations
 ) {
-    map<uint16_t, vector<uint128_t>> maskCombinations;
-    for (auto& borderEntry : borderMasks) {
-        vector<uint128_t> combinations = generateBitCombinations128(
-            borderEntry.second, 
-            borderNumbers[borderEntry.first]
+    for (const auto& entry : num_masks) {
+        const vector<uint128_t> combinations = bit_combinations(
+            entry.second, 
+            num_mines.at(entry.first)
         );
-        maskCombinations.insert({ borderEntry.first, combinations });
+        num_combinations.insert({ entry.first, combinations });
     }
-    return maskCombinations;
 }
 
-/**
- * Collects data about the field: unopened cells and border cells
- */
-void static collectFieldData() {
-    uint16_t flagCount = 0;
+//Initializes lists of edge and number cells and remaining mines
+void static get_field_data() {
+    uint16_t flag_count = 0;
     
-    for (uint16_t cellIndex = 0; cellIndex < fieldSize; cellIndex++) {
-        if (gameField[cellIndex] == 9 && countAdjacentNumberedCells(cellIndex) > 0) {
-            // Unopened cell adjacent to at least one numbered cell
-            unopenedCellsList.emplace_back(cellIndex);
+    for (uint16_t cell_index = 0; cell_index < field_size; cell_index++) {
+        if (game_field[cell_index] == 9 && count_number_cells(cell_index) > 0) {
+            edge_cells_list.emplace_back(cell_index);
         }
-        else if (gameField[cellIndex] != 9 && gameField[cellIndex] != 10 && gameField[cellIndex] != 11 && countAdjacentUnopenedCells(cellIndex) > 0) {
-            // Numbered cell adjacent to at least one unopened cell
-            borderCellsList.emplace_back(
-                cellIndex, 
-                static_cast<uint8_t>(gameField[cellIndex] - countAdjacentFlaggedCells(cellIndex))
+        else if (game_field[cell_index] != 9 && game_field[cell_index] != 10 && game_field[cell_index] != 11 && count_closed_cells(cell_index) > 0) {
+            num_cells_list.emplace_back(
+                cell_index, 
+                uint8_t(game_field[cell_index] - count_flagged_cells(cell_index))
             );
         }
-        else if (gameField[cellIndex] == 10 || gameField[cellIndex] == 11) {
-            flagCount++;
+        else if (game_field[cell_index] == 10 || game_field[cell_index] == 11) {
+            flag_count++;
         }
     }
-    unopenedCellsCount = unopenedCellsList.size();
-    remainingMines = totalMines - flagCount;
+    edge_cells_count = edge_cells_list.size();
+    remain_mines = total_mines - flag_count;
 }
 
-/**
- * Recursively groups connected unopened cells and border cells
- * 
- * @param unopenedCells Vector of unopened cells in the group
- * @param borderCells Vector of border cells in the group
- * @param unopenedChecked Number of unopened cells already checked
- * @param borderChecked Number of border cells already checked
- */
-void static buildConnectedGroup(
-    vector<uint16_t>& unopenedCells, 
-    vector<uint16_t>& borderCells, 
-    uint16_t unopenedChecked = 0, 
-    uint16_t borderChecked = 0
-) {
-    // Process newly added unopened cells
-    for (uint16_t i = unopenedChecked; i < unopenedCells.size(); i++) {
-        vector<uint16_t> neighbors = getNeighborCells(unopenedCells[i]);
-        for (uint16_t neighborIndex : neighbors) {
-            if (gameField[neighborIndex] < 9) {  // If it's a numbered cell
-                if (count(borderCells.begin(), borderCells.end(), neighborIndex) == 0) {
-                    borderCells.emplace_back(neighborIndex);
+//Makes one cell group
+void static make_cell_group(vector<uint16_t>& edge_cells, vector<uint16_t>& num_cells ) {
+    uint16_t edges_checked = 0;
+    uint16_t nums_checked = 0;
+    do {
+        // Process newly added edge cells
+        for (uint16_t i = edges_checked; i < edge_cells.size(); i++) {
+            const vector<uint16_t> neighbors = get_neighbor_cells(edge_cells[i]);
+            for (const uint16_t neighbor_index : neighbors) {
+                if (game_field[neighbor_index] < 9) {
+                    if (count(num_cells.begin(), num_cells.end(), neighbor_index) == 0) {
+                        num_cells.emplace_back(neighbor_index);
+                    }
                 }
             }
+            edges_checked++;
         }
-        unopenedChecked++;
-    }
-    
-    // Process newly added border cells
-    for (uint16_t i = borderChecked; i < borderCells.size(); i++) {
-        vector<uint16_t> neighbors = getNeighborCells(borderCells[i]);
-        for (uint16_t neighborIndex : neighbors) {
-            if (gameField[neighborIndex] == 9) {  // If it's an unopened cell
-                if (count(unopenedCells.begin(), unopenedCells.end(), neighborIndex) == 0) {
-                    unopenedCells.emplace_back(neighborIndex);
+
+        // Process newly added number cells
+        for (uint16_t i = nums_checked; i < num_cells.size(); i++) {
+            const vector<uint16_t> neighbors = get_neighbor_cells(num_cells[i]);
+            for (const uint16_t neighbor_index : neighbors) {
+                if (game_field[neighbor_index] == 9) {
+                    if (count(edge_cells.begin(), edge_cells.end(), neighbor_index) == 0) {
+                        edge_cells.emplace_back(neighbor_index);
+                    }
                 }
             }
+            nums_checked++;
         }
-        borderChecked++;
-    }
-    
-    // If new cells were added, continue recursively
-    if (borderChecked == borderCells.size() && unopenedChecked == unopenedCells.size()) {
-        return;
-    }
-    buildConnectedGroup(unopenedCells, borderCells, unopenedChecked, borderChecked);
+    } while (nums_checked != num_cells.size() || edges_checked != edge_cells.size());
 }
 
-/**
- * Identifies separate connected groups of cells in the field
- * 
- * @param groups Output vector to store the groups
- */
-void static identifyConnectedGroups(
-    vector<pair<vector<uint16_t>, vector<pair<uint16_t, uint8_t>>>>& groups
-) {
-    uint8_t processedCellsCount = 0;
+//Defines separate cell groups on field
+void static get_cell_groups(vector<pair<vector<uint16_t>, vector<pair<uint16_t, uint8_t>>>>& groups) {
+    uint8_t checked_count = 0;
     
-    while (processedCellsCount < unopenedCellsCount) {
-        uint16_t startCellIndex;
+    while (checked_count < edge_cells_count) {
+        uint16_t first_cell;
         
-        // Find an unopened cell that hasn't been processed yet
+        // Find an edge cell that hasn't been checked yet
         if (groups.size() != 0) {
-            bool skipCell;
-            for (int i = 0; i < unopenedCellsCount; i++) {
-                skipCell = false;
+            bool skip;
+            for (int i = 0; i < edge_cells_count; i++) {
+                skip = false;
                 for (int g = 0; g < groups.size(); g++) {
-                    for (int uog = 0; uog < groups[g].first.size(); uog++) {
-                        if (groups[g].first[uog] == unopenedCellsList[i]) {
-                            skipCell = true;
+                    for (int edgecell = 0; edgecell < groups[g].first.size(); edgecell++) {
+                        if (groups[g].first[edgecell] == edge_cells_list[i]) {
+                            skip = true;
                             break;
                         }
                     }
-                    if (skipCell) {
+                    if (skip) {
                         break;
                     }
                 }
-                if (!skipCell) {
-                    startCellIndex = unopenedCellsList[i];
+                if (!skip) {
+                    first_cell = edge_cells_list[i];
                     break;
                 }
             }
         }
         else {
-            startCellIndex = unopenedCellsList[0];
+            first_cell = edge_cells_list[0];
         }
         
         // Create a new group starting from this cell
-        vector<uint16_t> unopenedCells = { startCellIndex };
-        vector<uint16_t> borderCells;
-        buildConnectedGroup(unopenedCells, borderCells);
+        vector<uint16_t> edge_cells = { first_cell };
+        vector<uint16_t> num_cells;
+        make_cell_group(edge_cells, num_cells);
         
-        // Convert border cells to pairs with their mine counts
-        vector<pair<uint16_t, uint8_t>> borderCellData;
-        for (uint16_t b = 0; b < borderCells.size(); b++) {
-            for (uint16_t border = 0; border < borderCellsList.size(); border++) {
-                if (borderCells[b] == borderCellsList[border].first) {
-                    borderCellData.insert(borderCellData.begin() + b, borderCellsList[border]);
+        // Convert number cells to pairs with their mine counts
+        vector<pair<uint16_t, uint8_t>> num_cells_with_counts;
+        for (uint16_t n = 0; n < num_cells.size(); n++) {
+            for (uint16_t num = 0; num < num_cells_list.size(); num++) {
+                if (num_cells[n] == num_cells_list[num].first) {
+                    num_cells_with_counts.insert(num_cells_with_counts.begin() + n, num_cells_list[num]);
                     break;
                 }
             }
         }
         
-        processedCellsCount += unopenedCells.size();
-        std::sort(unopenedCells.begin(), unopenedCells.end());
-        groups.emplace_back(unopenedCells, borderCellData);
+        checked_count += edge_cells.size();
+        std::sort(edge_cells.begin(), edge_cells.end());
+        groups.emplace_back(edge_cells, num_cells_with_counts);
     }
 }
 
-/**
- * Backtracking algorithm to find possible mine configurations
- * 
- * @param currentConstraint Current border cell being processed
- * @param mask Current mine configuration mask
- * @param uoNeighbors Map of unopened cells to their adjacent border cells
- * @param bcNeighbors Map of border cells to their adjacent unopened cells
- * @param borderCombinations Possible combinations for each border cell
- * @param borderNumbers Map of border cells to their adjacent mine counts
- * @param borderMasks Map of border cells to their bit masks
- * @param combinations Output vector for valid combinations
- */
-void backtrackMineConfigurations128(
-    const uint16_t currentConstraint, 
-    uint128_t mask, 
-    const map<uint16_t, vector<uint16_t>>& uoNeighbors, 
-    const map<uint16_t, vector<uint16_t>>& bcNeighbors,
-    const map<uint16_t, vector<uint128_t>>& borderCombinations, 
-    const map<uint16_t, uint8_t>& borderNumbers, 
-    const map<uint16_t, uint128_t>& borderMasks, 
-    vector<uint128_t>& combinations
+//Backtracking algorithm to find possible mine configurations
+void static mine_combinations(
+    uint16_t current_number, uint128_t mask,
+    const map<uint16_t, vector<uint16_t>>& edge_neighbors, const map<uint16_t, vector<uint16_t>>& num_neighbors,
+    const map<uint16_t, vector<uint128_t>>& num_combinations, const map<uint16_t, uint8_t>& num_mines,
+    const map<uint16_t, uint128_t>& num_masks, vector<uint128_t>& combinations
 ) {
-    const vector<uint16_t> neighbors = bcNeighbors.at(currentConstraint);
-    set<uint16_t> allConstraints;
+    const vector<uint16_t> neighbors = num_neighbors.at(current_number);
+    set<uint16_t> constraints;
     
-    // Find all constraints that might be affected by the current choice
+    // Find all number cells that might be affected by the current choice
     for (const uint16_t neighbor : neighbors) {
-        const vector<uint16_t> uoNeighbor = uoNeighbors.at(neighbor);
-        for (const uint16_t uon : uoNeighbor) {
-            allConstraints.insert(uon);
+        const vector<uint16_t> neighbors = edge_neighbors.at(neighbor);
+        for (const uint16_t edge : neighbors) {
+            constraints.insert(edge);
         }
     }
     
     // Try each possible combination for the current constraint
-    for (const uint128_t combo : borderCombinations.at(currentConstraint)) {
-        const uint128_t newMask = mask | combo;
-        bool isValid = true;
+    for (const uint128_t combo : num_combinations.at(current_number)) {
+        const uint128_t new_mask = mask | combo;
+        bool valid = true;
         
         // Check if this combination is valid with all constraints
-        for (const uint16_t constraint : allConstraints) {
-            const uint128_t constraintMask = borderMasks.at(constraint);
-            const uint8_t minesRequired = borderNumbers.at(constraint);
-            const uint8_t totalCells = popcount128(constraintMask);
-            const uint8_t cellsNotInNewMask = popcount128((newMask ^ constraintMask) & constraintMask);
+        for (const uint16_t constraint : constraints) {
+            const uint128_t constraint_mask = num_masks.at(constraint);
+            const uint8_t mines = num_mines.at(constraint);
+            const uint8_t total_mines = popcount128(constraint_mask);
+            const uint8_t different_bits = popcount128((new_mask ^ constraint_mask) & constraint_mask);
             
             // If the number of remaining cells is less than needed mines, invalid
-            if (cellsNotInNewMask < (totalCells - minesRequired)) {
-                isValid = false;
+            if (different_bits < (total_mines - mines)) {
+                valid = false;
                 break;
             }
         }
         
-        if (isValid) {
-            if (currentConstraint != lastConstraintCell) {
+        if (valid) {
+            if (current_number != last_number) {
                 // Move to next constraint
-                uint16_t nextConstraint = (++borderMasks.find(currentConstraint))->first;
-                backtrackMineConfigurations128(
-                    nextConstraint, newMask, uoNeighbors, bcNeighbors, 
-                    borderCombinations, borderNumbers, borderMasks, combinations
+                const uint16_t next_number = (++num_masks.find(current_number))->first;
+                mine_combinations(
+                    next_number, new_mask, edge_neighbors, num_neighbors, 
+                    num_combinations, num_mines, num_masks, combinations
                 );
             }
-            else if (popcount128(newMask) <= remainingMines) {
-                // We've reached the end of constraints, check if valid
-                combinations.emplace_back(newMask);
+            else if (popcount128(new_mask) <= remain_mines) {
+                // We've reached the end of constraints, check if length's valid
+                combinations.emplace_back(new_mask);
             }
         }
     }
 }
 
-/**
- * Finds all possible mine configurations for a group of cells
- * 
- * @param unopenedCells Vector of unopened cells in the group
- * @param borderCells Vector of border cells with their mine counts
- * @return Pair of vectors: possible configurations and mapping to global indices
- */
-pair<vector<uint128_t>, vector<uint8_t>> findPossibleConfigurations128(
-    const vector<uint16_t> unopenedCells, 
-    const vector<pair<uint16_t, uint8_t>> borderCells
+// Finds all possible masks of bomb placements in given edge cells
+// Also returns mapping of group's edge cells to all edge cells on field
+pair<vector<uint128_t>, vector<uint8_t>> static find_bomb_combinations_masks(
+    const vector<uint16_t>& edge_cells, const vector<pair<uint16_t, uint8_t>>& num_cells
 ) {
     vector<uint128_t> combinations;
-    vector<uint8_t> localToGlobalMap(unopenedCells.size());
-    map<uint16_t, uint8_t> cellToBitPosition;
+    vector<uint8_t> mapping(edge_cells.size());
+    map<uint16_t, uint8_t> cell_to_bit;
     
     // Create mapping between local and global indices
-    for (int i = 0; i < unopenedCells.size(); i++) {
-        localToGlobalMap[i] = find(unopenedCellsList.begin(), unopenedCellsList.end(), unopenedCells[i]) - unopenedCellsList.begin();
-        cellToBitPosition.insert({ unopenedCells[i], i });
+    for (uint8_t i = 0; i < edge_cells.size(); i++) {
+        mapping[i] = find(edge_cells_list.begin(), edge_cells_list.end(), edge_cells[i]) - edge_cells_list.begin();
+        cell_to_bit.insert({ edge_cells[i], i });
     }
     
-    vector<pair<uint128_t, uint8_t>> borderInfo;
-    set<uint128_t> seenMasks;
-    set<uint128_t> borderCellSet;
-    vector<uint16_t> borderCellVector;
-    set<uint16_t> unopenedCellSet;
-    map<uint16_t, vector<uint16_t>> unopenedToNeighbors;
-    map<uint16_t, vector<uint16_t>> borderToNeighbors;
-    map<uint16_t, uint8_t> borderToNumbers;
-    map<uint16_t, uint128_t> borderToMasks;
+    set<uint128_t> seen_masks;
+    set<uint128_t> num_set;
+    set<uint16_t> edge_set;
+    map<uint16_t, vector<uint16_t>> edge_neighbors;
+    map<uint16_t, vector<uint16_t>> num_neighbors;
+    map<uint16_t, uint8_t> num_to_mines;
+    map<uint16_t, uint128_t> num_to_masks;
     
     // Create masks for each border cell
-    for (const auto& [cellIndex, mineCount] : borderCells) {
-        const vector<uint16_t> neighbors = getNeighborCells(cellIndex);
+    for (const auto& [cell_index, mine_count] : num_cells) {
+        const vector<uint16_t> neighbors = get_neighbor_cells(cell_index);
         uint128_t mask = 0;
         
-        for (const uint16_t neighborIndex : neighbors) {
-            const auto it = cellToBitPosition.find(neighborIndex);
-            if (it != cellToBitPosition.end()) {
+        for (const uint16_t neighbor_index : neighbors) {
+            const auto it = cell_to_bit.find(neighbor_index);
+            if (it != cell_to_bit.end()) {
                 mask |= uint128_t(1) << it->second;
             }
         }
         
-        if (seenMasks.find(mask) == seenMasks.end()) {
-            seenMasks.insert(mask);
-            borderCellSet.insert(cellIndex);
-            borderInfo.push_back({ mask, mineCount });
-            borderToNumbers.insert({ cellIndex, mineCount });
-            borderToMasks.insert({ cellIndex, mask });
-            borderCellVector.push_back(cellIndex);
+        if (seen_masks.find(mask) == seen_masks.end()) {
+            seen_masks.insert(mask);
+            num_set.insert(cell_index);
+            num_to_mines.insert({ cell_index, mine_count });
+            num_to_masks.insert({ cell_index, mask });
         }
     }
     
     // Build neighbor relationships
-    for (const uint16_t cell : unopenedCells) {
-        unopenedCellSet.insert(cell);
-        unopenedToNeighbors.insert({ cell, vector<uint16_t>() });
-        const vector<uint16_t> neighbors = getNeighborCells(cell);
+    for (const uint16_t cell : edge_cells) {
+        edge_set.insert(cell);
+        edge_neighbors.insert({ cell, vector<uint16_t>() });
+        const vector<uint16_t> neighbors = get_neighbor_cells(cell);
         
         for (const uint16_t neighbor : neighbors) {
-            if (borderCellSet.count(neighbor) > 0) {
-                unopenedToNeighbors[cell].push_back(neighbor);
+            if (num_set.count(neighbor) > 0) {
+                edge_neighbors[cell].emplace_back(neighbor);
             }
         }
     }
     
-    for (const uint16_t cell : borderCellSet) {
-        borderToNeighbors.insert({ cell, vector<uint16_t>() });
-        const vector<uint16_t> neighbors = getNeighborCells(cell);
+    for (const uint16_t cell : num_set) {
+        num_neighbors.insert({ cell, vector<uint16_t>() });
+        const vector<uint16_t> neighbors = get_neighbor_cells(cell);
         
         for (const uint16_t neighbor : neighbors) {
-            if (unopenedCellSet.count(neighbor) > 0) {
-                borderToNeighbors[cell].push_back(neighbor);
+            if (edge_set.count(neighbor) > 0) {
+                num_neighbors[cell].emplace_back(neighbor);
             }
         }
     }
     
-    // Generate possible combinations for each border cell
-    const map<uint16_t, vector<uint128_t>> borderCombinations = createBorderCellCombinations128(borderToMasks, borderToNumbers);
+    map<uint16_t, vector<uint128_t>> num_combinations;
+    num_cell_bit_combinations(num_to_masks, num_to_mines, num_combinations);
     
     // If there are border cells, run backtracking
-    if (!borderCellSet.empty()) {
-        lastConstraintCell = *borderCellSet.rbegin();
-        backtrackMineConfigurations128(
-            *borderCellSet.begin(), 0, 
-            unopenedToNeighbors, borderToNeighbors, 
-            borderCombinations, borderToNumbers, borderToMasks, 
+    if (!num_set.empty()) {
+        last_number = *num_set.rbegin();
+        mine_combinations(
+            *num_set.begin(), 0, 
+            edge_neighbors, num_neighbors, 
+            num_combinations, num_to_mines, num_to_masks, 
             combinations
         );
     }
 
-    return {combinations, localToGlobalMap};
+    return {combinations, mapping};
 }
 
-void static backtrackGenCombs(
-    const int index, 
-    const uint16_t usedMines, 
-    const vector<map<uint8_t, vector<uint64_t>>>& groupMaps,
-    vector<uint16_t>& counts,
-    vector<vector<uint64_t>>& globalResult,
-    vector<uint8_t>& globalNumToIndex
+//Backtracking algorithm to create occurrences map
+void static backtrack_occurrences(
+    int index, uint16_t mines, const vector<map<uint8_t, vector<uint64_t>>>& group_maps,
+    vector<uint8_t>& counts, vector<vector<uint64_t>>& occurrences, vector<uint8_t>& global_num_to_index
 ) {
-    if (usedMines > remainingMines) return;
+    if (mines > remain_mines) return;
 
-    if (index == groupMaps.size()) {
-        globalResult.emplace_back(vector<uint64_t>(unopenedCellsCount + 1));
-        globalNumToIndex.emplace_back(usedMines);
-        uint64_t mult = 1;
-        for (int group = 0; group < groupMaps.size(); group++) {
-            mult *= groupMaps[group].at(static_cast<uint8_t>(counts[group]))[unopenedCellsCount];
+    if (index == group_maps.size()) {
+        occurrences.emplace_back(vector<uint64_t>(edge_cells_count + 1));
+        global_num_to_index.emplace_back(mines);
+        uint64_t factor = 1;
+        for (int group = 0; group < group_maps.size(); group++) {
+            factor *= group_maps[group].at(counts[group])[edge_cells_count];
         }
-        for (int group = 0; group < groupMaps.size(); group++) {
-            const uint64_t count = groupMaps[group].at(static_cast<uint8_t>(counts[group]))[unopenedCellsCount];
+        for (int group = 0; group < group_maps.size(); group++) {
+            const uint64_t bit_count = group_maps[group].at(counts[group])[edge_cells_count];
 
-            for (uint8_t cell = 0; cell < unopenedCellsCount; cell++) {
-                globalResult.back()[cell] += (groupMaps[group].at(static_cast<uint8_t>(counts[group]))[cell] * (mult / count));
+            for (uint8_t cell = 0; cell < edge_cells_count; cell++) {
+                occurrences.back()[cell] += (group_maps[group].at(counts[group])[cell] * (factor / bit_count));
             }
         }
-        globalResult.back()[unopenedCellsCount] = mult;
+        occurrences.back()[edge_cells_count] = factor;
         return;
     }
 
-    for (const auto& [cnt, array] : groupMaps[index]) {
+    for (const auto& [cnt, array] : group_maps[index]) {
         counts[index] = cnt;
-        backtrackGenCombs(
+        backtrack_occurrences(
             index + 1,
-            usedMines + cnt,
-            groupMaps,
+            mines + cnt,
+            group_maps,
             counts,
-            globalResult,
-            globalNumToIndex
+            occurrences,
+            global_num_to_index
         );
     }
 }
 
-map<uint8_t, vector<uint64_t>> generateCombinations(
-    const vector<vector<uint128_t>>& maskGroups,
-    const vector<vector<uint8_t>>& localMappings
+//Counts occurences of every edge cell in combinations vector
+map<uint8_t, vector<uint64_t>> static create_occurrences_map(
+    const vector<vector<uint128_t>>& mask_groups,
+    const vector<vector<uint8_t>>& mapping_groups
 ) {
-    vector<map<uint8_t, vector<uint64_t>>> groupMaps(maskGroups.size());
-    for (int i = 0; i < maskGroups.size(); i++) {
+    vector<map<uint8_t, vector<uint64_t>>> group_maps;
+    group_maps.reserve(mask_groups.size());
+    for (int i = 0; i < mask_groups.size(); i++) {
         vector<vector<uint64_t>> result;
-        map<uint8_t, uint8_t> numToIndex;
-        const vector<uint8_t> localMapping = localMappings[i];
-        const vector<uint128_t> group = maskGroups[i];
-        for (const uint128_t localMask : group) {
-            const uint8_t setCount = popcount128(localMask);
-            const auto [it, inserted] = numToIndex.try_emplace(setCount, result.size());
+        map<uint8_t, uint8_t> count_to_index;
+        const vector<uint8_t> mapping = mapping_groups[i];
+        const vector<uint128_t> group = mask_groups[i];
+        for (const uint128_t local_mask : group) {
+            const uint8_t bit_count = popcount128(local_mask);
+            const auto [it, inserted] = count_to_index.try_emplace(bit_count, result.size());
             if (inserted) {
-                result.emplace_back(vector<uint64_t>(unopenedCellsCount + 1));
+                result.emplace_back(vector<uint64_t>(edge_cells_count + 1));
             }
 
-            for (uint8_t j = 0; j < localMapping.size(); j++) {
-                if ((localMask >> j) & 1) {
-                    result[numToIndex[setCount]][localMapping[j]]++;
+            for (uint8_t j = 0; j < mapping.size(); j++) {
+                if ((local_mask >> j) & 1) {
+                    result[count_to_index[bit_count]][mapping[j]]++;
                 }
             }
-            result[numToIndex[setCount]][unopenedCellsCount]++;
+            result[count_to_index[bit_count]][edge_cells_count]++;
         }
         map<uint8_t, vector<uint64_t>> combs;
-        for (const auto& [num, index] : numToIndex) {
-            combs.insert({num, result[index]});
+        for (const auto& [bit_count, index] : count_to_index) {
+            combs.insert({bit_count, result[index]});
         }
-        groupMaps[i] = combs;
+        group_maps.emplace_back(combs);
     }
-    vector<uint16_t> counts(groupMaps.size());
-    vector<vector<uint64_t>> globalResult;
-    vector<uint8_t> globalNumToIndex;
-    backtrackGenCombs(0, 0, groupMaps, counts, globalResult, globalNumToIndex);
+    vector<uint8_t> counts(group_maps.size());
+    vector<vector<uint64_t>> occurrences;
+    vector<uint8_t> global_num_to_index;
+    backtrack_occurrences(0, 0, group_maps, counts, occurrences, global_num_to_index);
 
-    map<uint8_t, vector<uint64_t>> globalRes;
-    for (int ind = 0; ind < globalNumToIndex.size(); ind++) {
-        const auto [it, inserted] = globalRes.try_emplace(globalNumToIndex[ind], globalResult[ind]);
+    map<uint8_t, vector<uint64_t>> occurrences_map;
+    for (int ind = 0; ind < global_num_to_index.size(); ind++) {
+        const auto [it, inserted] = occurrences_map.try_emplace(global_num_to_index[ind], occurrences[ind]);
         if (!inserted) {
-            for (uint8_t cell = 0; cell < unopenedCellsCount + 1; cell++) {
-                globalRes[globalNumToIndex[ind]][cell] += globalResult[ind][cell];
+            for (uint8_t cell = 0; cell < edge_cells_count + 1; cell++) {
+                occurrences_map[global_num_to_index[ind]][cell] += occurrences[ind][cell];
             }
         }
     }
-    return globalRes;
+    return occurrences_map;
 } 
 
-/**
- * Calculates probabiliy for every closed cell on field to be a mine
- * 
- * @param combinations Map of mine count to occurances vector
- */
-void calculateProbabilies(const map<uint8_t, vector<uint64_t>>& combinations) {
-    vector<uint16_t> floatingTilesList;
-    for (uint16_t cell = 0; cell < fieldSize; cell++) {
-        if (gameField[cell] == 9) {
-            if (countAdjacentNumberedCells(cell) == 0) {
-                floatingTilesList.emplace_back(cell);
+//Calculates probabiliy for every closed cell on field to be a mine
+void static calculate_probabilities(const map<uint8_t, vector<uint64_t>>& combinations) {
+    vector<uint16_t> float_cell_list;
+    for (uint16_t cell = 0; cell < field_size; cell++) {
+        if (game_field[cell] == 9) {
+            if (count_number_cells(cell) == 0) {
+                float_cell_list.emplace_back(cell);
             }
         }
     }
-    const uint16_t floatingTilesCount = floatingTilesList.size();
+    const uint16_t float_cell_count = float_cell_list.size();
 
-    if (remainingMines - combinations.begin()->first <= floatingTilesCount) {
-        uint16_t vUO = UINT16_MAX, vFL = UINT16_MAX;
+    if (remain_mines - combinations.begin()->first <= float_cell_count) {
+        uint16_t vEC = UINT16_MAX, vFC = UINT16_MAX;
         for (const auto& [m, arr] : combinations) {
-            int16_t minUO = min(remainingMines - m, floatingTilesCount - (remainingMines - m));
-            if (vUO > minUO) 
-                vUO = minUO;
-            int16_t minFL = min(remainingMines - m - 1, floatingTilesCount - (remainingMines - m));
-            if (vFL > minFL && minFL >= 0) 
-                vFL = minFL;
-            else if (minFL < 0) vFL = 0;
+            const int16_t minEC = min(remain_mines - m, float_cell_count - (remain_mines - m));
+            if (vEC > minEC) 
+                vEC = minEC;
+            const int16_t minFC = min(remain_mines - m - 1, float_cell_count - (remain_mines - m));
+            if (vFC > minFC && minFC >= 0) 
+                vFC = minFC;
+            else if (minFC < 0) vFC = 0;
         }
 
-        map<uint8_t, double> weights;
-        double weightsFl = 0, sumweights = 0;
+        map<uint8_t, double> weights_map;
+        double weights_FC = 0, weights_sum = 0;
 
         for (const auto& [m, arr] : combinations) {
-            const uint16_t right = min(remainingMines - m, floatingTilesCount - (remainingMines - m));
-            const uint16_t len = right - vUO;
-            const uint16_t left = floatingTilesCount + 1 - right;
-            const double weight = calculateBinomialCoefficient(left, right, len);
+            const uint16_t right = min(remain_mines - m, float_cell_count - (remain_mines - m));
+            const uint16_t len = right - vEC;
+            const uint16_t left = float_cell_count + 1 - right;
+            const double weight = calc_weight(left, right, len);
 
-            const uint16_t rightFl = min(remainingMines - m - 1, floatingTilesCount - (remainingMines - m));
-            const uint16_t lenFl = rightFl - vFL;
-            const uint16_t leftFl = floatingTilesCount - rightFl;
-            const double weightFl = calculateBinomialCoefficient(leftFl, rightFl, lenFl);
+            const uint16_t right_FC = min(remain_mines - m - 1, float_cell_count - (remain_mines - m));
+            const uint16_t len_FC = right_FC - vFC;
+            const uint16_t left_FC = float_cell_count - right_FC;
+            const double weight_FC = calc_weight(left_FC, right_FC, len_FC);
 
-            weightsFl += weightFl * arr[unopenedCellsCount];
-            sumweights += weight * arr[unopenedCellsCount];
-            weights.insert({ m, weight });
+            weights_FC += weight_FC * arr[edge_cells_count];
+            weights_sum += weight * arr[edge_cells_count];
+            weights_map.insert({ m, weight });
         }
 
-        double floatingTilesProbability = weightsFl / sumweights;
-        if (vUO > 0 || vFL > 0) {
-            if (vUO == vFL) {
-                floatingTilesProbability *= ((static_cast<double>(floatingTilesCount) - vFL) / floatingTilesCount);
+        double float_cells_probability = weights_FC / weights_sum;
+        if (vEC > 0 || vFC > 0) {
+            if (vEC == vFC) {
+                float_cells_probability *= ((static_cast<double>(float_cell_count) - vFC) / float_cell_count);
             }
             else {
-                floatingTilesProbability *= (static_cast<double>(vUO) / floatingTilesCount);
+                float_cells_probability *= (static_cast<double>(vEC) / float_cell_count);
             }
         }
-        const uint8_t fTProbabilityUInt = round(floatingTilesProbability * 100) + 151;
-        for (const auto tile : floatingTilesList) {
-            gameField[tile] = fTProbabilityUInt;
+        const uint8_t FC_probability_code = round(float_cells_probability * 100) + 151;
+        for (const auto cell : float_cell_list) {
+            game_field[cell] = FC_probability_code;
         }
         
-        for (uint8_t cell = 0; cell < unopenedCellsCount; cell++) {
-            double cellWeight = 0;
+        for (uint8_t cell = 0; cell < edge_cells_count; cell++) {
+            double cell_weight = 0;
             for (const auto& entry : combinations) {
-                cellWeight += entry.second[cell] * weights[entry.first];
+                cell_weight += entry.second[cell] * weights_map[entry.first];
             }
-            gameField[unopenedCellsList[cell]] = static_cast<uint8_t>(round(cellWeight / sumweights * 100) + 50);
+            game_field[edge_cells_list[cell]] = round(cell_weight / weights_sum * 100) + 50;
         }
     }
 }
 
-/**
- * Sets trivial flags on game field
- * 
-*/
-void setTrivialFlags() {
-    vector<uint8_t> tempField(fieldSize);
-    for (int i = 0; i < fieldSize; i++) {
-        uint8_t unopened = countAdjacentUnopenedCells(i);
-        if (gameField[i] > 0 && unopened > 0 && unopened == gameField[i] - countAdjacentFlaggedCells(i)) {
-            vector<uint16_t> neis = getNeighborCells(i);
-            for (uint16_t nei : neis) {
-                if (gameField[nei] == 9)
-                    tempField[nei] = 11;
+//Sets trivial flags on game field
+void static set_trivial_flags() {
+    vector<uint8_t> temp_field(field_size);
+    for (uint16_t i = 0; i < field_size; i++) {
+        const uint8_t closed_count = count_closed_cells(i);
+        if (game_field[i] > 0 && closed_count > 0 && closed_count == game_field[i] - count_flagged_cells(i)) {
+            const vector<uint16_t> neighbors = get_neighbor_cells(i);
+            for (const uint16_t neighbor : neighbors) {
+                if (game_field[neighbor] == 9)
+                    temp_field[neighbor] = 11;
                 else
-                    tempField[nei] = gameField[nei];
+                    temp_field[neighbor] = game_field[neighbor];
             }
-            tempField[i] = gameField[i];
+            temp_field[i] = game_field[i];
         }
-        else if (tempField[i] != 11)
-            tempField[i] = gameField[i];
+        else if (temp_field[i] != 11)
+            temp_field[i] = game_field[i];
     }
-    for (int i = 0; i < fieldSize; i++) {
-        gameField[i] = tempField[i];
+    for (uint16_t i = 0; i < field_size; i++) {
+        game_field[i] = temp_field[i];
     }
 }
 
-/** 
- * The module entry point 
- * 
- * @param field Vector of game field state
- * @param w Field width
- * @param h Field height
- * @param m Total number of mines of field
- * @return Vector of game field with calculated probabilities
-*/
+//The module entry point
 vector<uint8_t> probabilities(vector<uint8_t> field, uint8_t w, uint8_t h, uint16_t m) {
-    boardWidth = w;
-    boardHeight = h;
-    totalMines = m;
-    fieldSize = field.size();
-    gameField.clear();
-    gameField.resize(fieldSize);
-    for (int i = 0; i < fieldSize; i++) {
-        gameField[i] = field[i];
+    field_width = w;
+    field_height = h;
+    total_mines = m;
+    field_size = field.size();
+    game_field.clear();
+    game_field.reserve(field_size);
+    for (uint16_t i = 0; i < field_size; i++) {
+        game_field.emplace_back(field[i]);
     }
     
-    setTrivialFlags();
+    set_trivial_flags();
     
-    borderCellsList.clear();
-    unopenedCellsList.clear();
-    unopenedCellsCount = 0;
+    num_cells_list.clear();
+    edge_cells_list.clear();
+    edge_cells_count = 0;
 
-    collectFieldData();
+    get_field_data();
 
     vector<pair<vector<uint16_t>, vector<pair<uint16_t, uint8_t>>>> groups;
-    identifyConnectedGroups(groups);
+    get_cell_groups(groups);
 
     if (groups.size() == 0) {
         return { 21 };
     }
 
-    vector<vector<uint128_t>> combinationsGroups;
-    vector<vector<uint8_t>> localMappingsGroups;
+    vector<vector<uint128_t>> combinations_groups;
+    vector<vector<uint8_t>> mappings_groups;
 
     for (uint8_t group = 0; group < groups.size(); group++) {
-        auto [unopenedCells, borderCells] = groups[group];
-        if (unopenedCells.size() > 128) {
+        const auto [edge_cells, num_cells] = groups[group];
+        if (edge_cells.size() > 128) {
             return { 20 };
         }
-        const auto [groupCombinations, groupMapping] = findPossibleConfigurations128(unopenedCells, borderCells);
-        combinationsGroups.emplace_back(groupCombinations);
-        localMappingsGroups.emplace_back(groupMapping);
+        const auto [combinations, mapping] = find_bomb_combinations_masks(edge_cells, num_cells);
+        combinations_groups.emplace_back(combinations);
+        mappings_groups.emplace_back(mapping);
     }
 
-    const map<uint8_t, vector<uint64_t>> combinations = generateCombinations(combinationsGroups, localMappingsGroups);
+    const map<uint8_t, vector<uint64_t>> occurrences = create_occurrences_map(combinations_groups, mappings_groups);
 
-    if (combinations.size() == 0) {
+    if (occurrences.size() == 0) {
         return { 22 };
     }
 
-    calculateProbabilies(combinations);
+    calculate_probabilities(occurrences);
 
-    return gameField;
+    return game_field;
 }
 
 //em++ calc.cpp -o calc.mjs -s ENVIRONMENT=web -s MODULARIZE=1 -s EXPORT_ES6=1 -s EXPORT_NAME=Calc -s SINGLE_FILE=1 -O3 --bind
 
 EMSCRIPTEN_BINDINGS(module){
     emscripten::function("probabilities", &probabilities);
-    register_vector<uint8_t>("vectorUint8_t");
+    emscripten::register_vector<uint8_t>("vectorUint8_t");
 }
